@@ -30,6 +30,16 @@ app.get('/api/challenge', async (req, res) => {
     }
 });
 
+app.post('/api/authenticate', async (req, res) => {
+    try {
+        const { response, challenge } = req.body;
+        const verify = await keymaster.verifyResponse(response, challenge);
+        res.json({ authenticated: verify.match });
+    } catch (error) {
+        res.status(500).send(error.toString());
+    }
+});
+
 app.use((req, res) => {
     if (!req.path.startsWith('/api')) {
         res.sendFile(path.join(__dirname, 'auth-client/build', 'index.html'));
