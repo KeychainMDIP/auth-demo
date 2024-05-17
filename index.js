@@ -1,5 +1,7 @@
 import express from 'express';
 import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const app = express();
 const v1router = express.Router();
@@ -9,6 +11,9 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use('/api/v1', v1router);
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+app.use(express.static(path.join(__dirname, 'auth-client/build')));
+
 v1router.get('/version', async (req, res) => {
     try {
         res.json(1);
@@ -17,8 +22,13 @@ v1router.get('/version', async (req, res) => {
     }
 });
 
-app.get('/', (req, res) => {
-    res.send('Hello, World!');
+app.use((req, res) => {
+    if (!req.path.startsWith('/api')) {
+        res.sendFile(path.join(__dirname, 'auth-client/build', 'index.html'));
+    } else {
+        console.warn(`Warning: Unhandled API endpoint - ${req.method} ${req.originalUrl}`);
+        res.status(404).json({ message: 'Endpoint not found' });
+    }
 });
 
 process.on('uncaughtException', (error) => {
