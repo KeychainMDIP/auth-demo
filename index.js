@@ -2,21 +2,29 @@ import express from 'express';
 import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import * as keymaster  from './keymaster-sdk.js';
 
 const app = express();
-const v1router = express.Router();
 const port = 3000;
 
 app.use(morgan('dev'));
 app.use(express.json());
-app.use('/api/v1', v1router);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(express.static(path.join(__dirname, 'auth-client/build')));
 
-v1router.get('/version', async (req, res) => {
+app.get('/api/version', async (req, res) => {
     try {
         res.json(1);
+    } catch (error) {
+        res.status(500).send(error.toString());
+    }
+});
+
+app.get('/api/challenge', async (req, res) => {
+    try {
+        const challenge = await keymaster.createChallenge();
+        res.json(challenge);
     } catch (error) {
         res.status(500).send(error.toString());
     }
