@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+pushd auth-client
+npm run build
+popd
+node index.js

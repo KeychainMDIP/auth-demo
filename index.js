@@ -32,15 +32,13 @@ app.use((req, res) => {
 });
 
 process.on('uncaughtException', (error) => {
-    //console.error('Unhandled exception caught');
     console.error('Unhandled exception caught', error);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled rejection at:', promise, 'reason:', reason);
-    //console.error('Unhandled rejection caught');
 });
 
 app.listen(port, () => {
-    console.log(`Example app listening at http://localhost:${port}`);
+    console.log(`auth-demo listening at http://localhost:${port}`);
 });
