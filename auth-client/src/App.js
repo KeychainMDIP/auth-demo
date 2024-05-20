@@ -5,8 +5,8 @@ import {
     Routes,
     Route,
 } from "react-router-dom";
-import { Box, Button, Grid, MenuItem, Select, Tab, Tabs } from '@mui/material';
-import { Table, TableBody, TableRow, TableCell, TextField, Typography } from '@mui/material';
+import { Box, Button, Grid, TextField, Typography } from '@mui/material';
+import { Table, TableBody, TableRow, TableCell } from '@mui/material';
 import axios from 'axios';
 
 import './App.css';
@@ -18,6 +18,8 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<ViewLogin />} />
                 <Route path="/logout" element={<ViewLogout />} />
+                <Route path="/forum" element={<ViewForum />} />
+                <Route path="/admin" element={<ViewAdmin />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
         </Router>
@@ -26,6 +28,7 @@ function App() {
 
 function Home() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
     const [userDID, setUserDID] = useState('');
     const navigate = useNavigate();
 
@@ -33,8 +36,10 @@ function Home() {
         const init = async () => {
             try {
                 const response = await axios.get(`/api/check-auth`);
-                setIsAuthenticated(response.data.isAuthenticated);
-                setUserDID(response.data.userDID);
+                const auth = response.data;
+                setIsAuthenticated(auth.isAuthenticated);
+                setIsAdmin(auth.isAdmin);
+                setUserDID(auth.userDID);
             }
             catch (error) {
                 window.alert(error);
@@ -75,7 +80,13 @@ function Home() {
 
             {isAuthenticated ? (
                 <Box>
-                    Welcome {userDID}
+                    Welcome {userDID}, you have access to the following pages:
+                    <ul>
+                        <li><a href='/forum'>Forum</a></li>
+                        {isAdmin &&
+                            <li><a href='/admin'>Admin</a></li>
+                        }
+                    </ul>
                 </Box>
             ) : (
                 <Box>
@@ -190,6 +201,58 @@ function ViewLogout() {
 
         init();
     });
+}
+
+function ViewForum() {
+    const [forumInfo, setForumInfo] = useState('');
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const init = async () => {
+            try {
+                const response = await axios.get(`/api/forum`);
+                setForumInfo(response.data);
+            }
+            catch (error) {
+                navigate('/');
+            }
+        };
+
+        init();
+    }, [navigate]);
+
+    return (
+        <div className="App">
+            <h1>Forum</h1>
+            <p>{forumInfo}</p>
+        </div>
+    )
+}
+
+function ViewAdmin() {
+    const [adminInfo, setAdminInfo] = useState(null);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const init = async () => {
+            try {
+                const response = await axios.get(`/api/admin`);
+                setAdminInfo(response.data);
+            }
+            catch (error) {
+                navigate('/');
+            }
+        };
+
+        init();
+    }, [navigate]);
+
+    return (
+        <div className="App">
+            <h1>Admin</h1>
+            <pre>{JSON.stringify(adminInfo, null, 4)}</pre>
+        </div>
+    )
 }
 
 function NotFound() {

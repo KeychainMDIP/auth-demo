@@ -10,6 +10,7 @@ import * as keymaster from './keymaster-sdk.js';
 const app = express();
 const port = 3000;
 const domain = 'localhost';
+const dbName = 'db.json';
 
 app.use(morgan('dev'));
 app.use(express.json());
@@ -25,12 +26,35 @@ app.use(session({
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(express.static(path.join(__dirname, 'auth-client/build')));
 
+function loadDb() {
+    if (fs.existsSync(dbName)) {
+        return JSON.parse(fs.readFileSync(dbName));
+    }
+    else {
+        return {};
+    }
+}
+
+function writeDb(db) {
+    fs.writeFileSync(dbName, JSON.stringify(db, null, 4));
+}
+
 function isAuthenticated(req, res, next) {
     if (req.session.user) {
         return next();
     }
     res.status(401).send('You need to log in first');
 }
+
+function isAdmin(req, res, next) {
+    const db = loadDb();
+
+    if (req.session.user.did === db.admin) {
+        return next();
+    }
+    res.status(401).send('You need to log in first');
+}
+
 
 app.get('/api/version', async (req, res) => {
     try {
@@ -79,8 +103,21 @@ app.get('/api/check-auth', (req, res) => {
     try {
         const isAuthenticated =  req.session.user ? true : false;
         const userDID = isAuthenticated ? req.session.user.did : null;
-        const isAdmin = false;
         const roles = [];
+        const db = loadDb();
+        let isAdmin = false;
+
+        if (userDID) {
+            if (db.admin) {
+                isAdmin = userDID === db.admin;
+            }
+            else {
+                // First user to login gets admin status
+                db.admin = userDID;
+                isAdmin = true;
+                writeDb(db);
+            }
+        }
 
         const auth = {
             isAuthenticated,
@@ -96,10 +133,18 @@ app.get('/api/check-auth', (req, res) => {
     }
 });
 
-app.get('/api/protected', isAuthenticated, (req, res) => {
+app.get('/api/forum', isAuthenticated, (req, res) => {
     try {
-        req.session.destroy();
-        res.redirect('/login');
+        res.json('forum info');
+    }
+    catch (error) {
+        res.status(500).send(error.toString());
+    }
+});
+
+app.get('/api/admin', isAuthenticated, isAdmin, (req, res) => {
+    try {
+        res.json(loadDb());
     }
     catch (error) {
         res.status(500).send(error.toString());
