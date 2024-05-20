@@ -67,8 +67,14 @@ function ViewLogin() {
     }
 
     async function copyToClipboard(text) {
-        window.alert(text);
-    }
+        try {
+            await navigator.clipboard.writeText(text);
+            window.alert(`"${text}" copied to clipboard`);
+        }
+        catch (error) {
+            window.alert('Failed to copy text: ', error);
+        }
+    };
 
     return (
         <div className="App">

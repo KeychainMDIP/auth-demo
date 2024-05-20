@@ -1,11 +1,14 @@
 import express from 'express';
 import morgan from 'morgan';
 import path from 'path';
+import fs from 'fs';
+import https from 'https';
 import { fileURLToPath } from 'url';
-import * as keymaster  from './keymaster-sdk.js';
+import * as keymaster from './keymaster-sdk.js';
 
 const app = express();
 const port = 3000;
+const domain = 'localhost';
 
 app.use(morgan('dev'));
 app.use(express.json());
@@ -57,6 +60,12 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled rejection at:', promise, 'reason:', reason);
 });
 
-app.listen(port, () => {
-    console.log(`auth-demo listening at http://localhost:${port}`);
+// Read the certificate and key
+const options = {
+    key: fs.readFileSync(`${domain}-key.pem`),
+    cert: fs.readFileSync(`${domain}.pem`)
+};
+
+https.createServer(options, app).listen(port, () => {
+    console.log(`auth-demo listening at https://${domain}:${port}`);
 });
