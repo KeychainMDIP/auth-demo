@@ -1,4 +1,5 @@
 import express from 'express';
+import session from 'express-session';
 import morgan from 'morgan';
 import path from 'path';
 import fs from 'fs';
@@ -13,8 +14,23 @@ const domain = 'localhost';
 app.use(morgan('dev'));
 app.use(express.json());
 
+// Session setup
+app.use(session({
+    secret: 'MDIP',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: true } // Set to true if using HTTPS
+}));
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(express.static(path.join(__dirname, 'auth-client/build')));
+
+function isAuthenticated(req, res, next) {
+    if (req.session.user) {
+        return next();
+    }
+    res.status(401).send('You need to log in first');
+}
 
 app.get('/api/version', async (req, res) => {
     try {
@@ -33,12 +49,59 @@ app.get('/api/challenge', async (req, res) => {
     }
 });
 
-app.post('/api/authenticate', async (req, res) => {
+app.post('/api/login', async (req, res) => {
     try {
         const { response, challenge } = req.body;
         const verify = await keymaster.verifyResponse(response, challenge);
+
+        if (verify.match) {
+            const docs = await keymaster.resolveDID(response);
+            req.session.user = { did: docs.didDocument.controller };
+        }
+
         res.json({ authenticated: verify.match });
     } catch (error) {
+        res.status(500).send(error.toString());
+    }
+});
+
+app.post('/api/logout', (req, res) => {
+    try {
+        req.session.destroy();
+        res.redirect('/login');
+    }
+    catch (error) {
+        res.status(500).send(error.toString());
+    }
+});
+
+app.get('/api/check-auth', (req, res) => {
+    try {
+        const isAuthenticated =  req.session.user ? true : false;
+        const userDID = isAuthenticated ? req.session.user.did : null;
+        const isAdmin = false;
+        const roles = [];
+
+        const auth = {
+            isAuthenticated,
+            userDID,
+            isAdmin,
+            roles,
+        };
+
+        res.json(auth);
+    }
+    catch (error) {
+        res.status(500).send(error.toString());
+    }
+});
+
+app.get('/api/protected', isAuthenticated, (req, res) => {
+    try {
+        req.session.destroy();
+        res.redirect('/login');
+    }
+    catch (error) {
         res.status(500).send(error.toString());
     }
 });

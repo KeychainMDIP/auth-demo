@@ -17,6 +17,7 @@ function App() {
             <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<ViewLogin />} />
+                <Route path="/logout" element={<ViewLogout />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
         </Router>
@@ -24,9 +25,63 @@ function App() {
 }
 
 function Home() {
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [userDID, setUserDID] = useState('');
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const init = async () => {
+            try {
+                const response = await axios.get(`/api/check-auth`);
+                setIsAuthenticated(response.data.isAuthenticated);
+                setUserDID(response.data.userDID);
+            }
+            catch (error) {
+                window.alert(error);
+            }
+        };
+
+        init();
+    }, []);
+
+    async function login() {
+        navigate('/login');
+    }
+
+    async function logout() {
+        navigate('/logout');
+    }
+
     return (
         <div className="App">
             <h1>Home</h1>
+
+            <Grid container style={{ width: '800px' }}>
+                <Grid item xs={true}>
+                    <h2>MDIP auth demo</h2>
+                </Grid>
+                <Grid item xs={true} style={{ textAlign: 'right' }}>
+                    {isAuthenticated ? (
+                        <Button variant="contained" color="primary" onClick={logout}>
+                            Logout
+                        </Button>
+                    ) : (
+                        <Button variant="contained" color="primary" onClick={login}>
+                            Login
+                        </Button>
+                    )}
+                </Grid>
+            </Grid>
+
+            {isAuthenticated ? (
+                <Box>
+                    Welcome {userDID}
+                </Box>
+            ) : (
+                <Box>
+                    Please login to continue
+                </Box>
+            )}
         </div>
     )
 }
@@ -52,7 +107,7 @@ function ViewLogin() {
 
     async function login() {
         try {
-            const getAuth = await axios.post(`/api/authenticate`, { challenge: challengeDID, response: responseDID });
+            const getAuth = await axios.post(`/api/login`, { challenge: challengeDID, response: responseDID });
 
             if (getAuth.data.authenticated) {
                 navigate('/');
@@ -117,6 +172,24 @@ function ViewLogin() {
             </Table>
         </div>
     )
+}
+
+function ViewLogout() {
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const init = async () => {
+            try {
+                await axios.post(`/api/logout`);
+                navigate('/');
+            }
+            catch (error) {
+                window.alert('Failed to logout: ', error);
+            }
+        };
+
+        init();
+    });
 }
 
 function NotFound() {
