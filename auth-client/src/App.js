@@ -30,6 +30,8 @@ function Home() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [userDID, setUserDID] = useState('');
+    const [logins, setLogins] = useState(0);
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -40,6 +42,10 @@ function Home() {
                 setIsAuthenticated(auth.isAuthenticated);
                 setIsAdmin(auth.isAdmin);
                 setUserDID(auth.userDID);
+
+                if (auth.history) {
+                    setLogins(auth.history.logins);
+                }
             }
             catch (error) {
                 window.alert(error);
@@ -80,7 +86,13 @@ function Home() {
 
             {isAuthenticated ? (
                 <Box>
-                    Welcome {userDID}, you have access to the following pages:
+                    {logins > 1 ? (
+                        `Welcome back, ${userDID}`
+                    ) : (
+                        `Welcome, ${userDID}`
+                    )}
+                    <br />
+                    You have access to the following pages:
                     <ul>
                         <li><a href='/forum'>Forum</a></li>
                         {isAdmin &&

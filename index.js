@@ -47,14 +47,15 @@ function isAuthenticated(req, res, next) {
 }
 
 function isAdmin(req, res, next) {
-    const db = loadDb();
+    isAuthenticated(req, res, () => {
+        const db = loadDb();
 
-    if (req.session.user.did === db.admin) {
-        return next();
-    }
-    res.status(401).send('You need to log in first');
+        if (req.session.user.did === db.admin) {
+            return next();
+        }
+        res.status(403).send('Admin access required');
+    });
 }
-
 
 app.get('/api/version', async (req, res) => {
     try {
@@ -80,7 +81,30 @@ app.post('/api/login', async (req, res) => {
 
         if (verify.match) {
             const docs = await keymaster.resolveDID(response);
-            req.session.user = { did: docs.didDocument.controller };
+            const did = docs.didDocument.controller;
+            req.session.user = { did };
+
+            const db = loadDb();
+
+            if (!db.users) {
+                db.users = {};
+            }
+
+            const now = new Date().toISOString();
+
+            if (Object.keys(db.users).includes(did)) {
+                db.users[did].lastLogin = now;
+                db.users[did].logins += 1;
+            }
+            else {
+                db.users[did] = {
+                    firstLogin: now,
+                    lastLogin: now,
+                    logins: 1,
+                }
+            }
+
+            writeDb(db);
         }
 
         res.json({ authenticated: verify.match });
@@ -119,11 +143,14 @@ app.get('/api/check-auth', (req, res) => {
             }
         }
 
+        const history = isAuthenticated ? db.users[userDID] : null;
+
         const auth = {
             isAuthenticated,
             userDID,
             isAdmin,
             roles,
+            history,
         };
 
         res.json(auth);
@@ -142,7 +169,7 @@ app.get('/api/forum', isAuthenticated, (req, res) => {
     }
 });
 
-app.get('/api/admin', isAuthenticated, isAdmin, (req, res) => {
+app.get('/api/admin', isAdmin, (req, res) => {
     try {
         res.json(loadDb());
     }
