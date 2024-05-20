@@ -10,7 +10,7 @@ import * as keymaster from './keymaster-sdk.js';
 const app = express();
 const port = 3000;
 const domain = 'localhost';
-const dbName = 'db.json';
+const dbName = 'data/db.json';
 
 app.use(morgan('dev'));
 app.use(express.json());

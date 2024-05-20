@@ -1,0 +1,12 @@
+version: "3"
+services:
+  auth-demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: keychainmdip/auth-demo
+    network_mode: host
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "3000:3000"
