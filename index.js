@@ -125,7 +125,7 @@ app.post('/api/logout', (req, res) => {
 
 app.get('/api/check-auth', (req, res) => {
     try {
-        const isAuthenticated =  req.session.user ? true : false;
+        const isAuthenticated = req.session.user ? true : false;
         const userDID = isAuthenticated ? req.session.user.did : null;
         const roles = [];
         const db = loadDb();
@@ -143,14 +143,14 @@ app.get('/api/check-auth', (req, res) => {
             }
         }
 
-        const history = isAuthenticated ? db.users[userDID] : null;
+        const profile = isAuthenticated ? db.users[userDID] : null;
 
         const auth = {
             isAuthenticated,
             userDID,
             isAdmin,
             roles,
-            history,
+            profile,
         };
 
         res.json(auth);
@@ -172,6 +172,27 @@ app.get('/api/forum', isAuthenticated, (req, res) => {
 app.get('/api/admin', isAdmin, (req, res) => {
     try {
         res.json(loadDb());
+    }
+    catch (error) {
+        res.status(500).send(error.toString());
+    }
+});
+
+app.get('/api/profile/:did', (req, res) => {
+    try {
+        const did = req.params.did;
+        const db = loadDb();
+
+        if (!Object.keys(db.users).includes(did)) {
+            return res.status(404).send("Not found");
+        }
+
+        const profile = db.users[did];
+
+        profile.did = did;
+        profile.isUser = (req.session?.user?.did === did);
+
+        res.json(profile);
     }
     catch (error) {
         res.status(500).send(error.toString());
