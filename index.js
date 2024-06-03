@@ -160,9 +160,11 @@ app.get('/api/check-auth', async (req, res) => {
     }
 });
 
-app.get('/api/forum', isAuthenticated, async (req, res) => {
+app.get('/api/users', isAuthenticated, async (req, res) => {
     try {
-        res.json('forum info');
+        const db = loadDb();
+        const users = Object.keys(db.users);
+        res.json(users);
     }
     catch (error) {
         res.status(500).send(error.toString());
@@ -178,7 +180,7 @@ app.get('/api/admin', isAdmin, async (req, res) => {
     }
 });
 
-app.get('/api/profile/:did', async (req, res) => {
+app.get('/api/profile/:did', isAuthenticated, async (req, res) => {
     try {
         const did = req.params.did;
         const db = loadDb();
@@ -199,7 +201,7 @@ app.get('/api/profile/:did', async (req, res) => {
     }
 });
 
-app.get('/api/profile/:did/name', async (req, res) => {
+app.get('/api/profile/:did/name', isAuthenticated, async (req, res) => {
     try {
         const did = req.params.did;
         const db = loadDb();

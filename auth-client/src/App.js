@@ -20,7 +20,7 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<ViewLogin />} />
                 <Route path="/logout" element={<ViewLogout />} />
-                <Route path="/forum" element={<ViewForum />} />
+                <Route path="/users" element={<ViewUsers />} />
                 <Route path="/admin" element={<ViewAdmin />} />
                 <Route path="/profile/:did" element={<ViewProfile />} />
                 <Route path="*" element={<NotFound />} />
@@ -49,6 +49,10 @@ function Home() {
 
                 if (auth.profile) {
                     setLogins(auth.profile.logins);
+
+                    if (auth.profile.name) {
+                        setUserName(auth.profile.name);
+                    }
                 }
             }
             catch (error) {
@@ -91,7 +95,7 @@ function Home() {
             {isAuthenticated ? (
                 <Box>
                     {logins > 1 ? (
-                        `Welcome back, ${userDID}`
+                        `Welcome back, ${userName || userDID}`
                     ) : (
                         `Welcome, ${userDID}`
                     )}
@@ -99,7 +103,7 @@ function Home() {
                     You have access to the following pages:
                     <ul>
                         <li><a href={`/profile/${userDID}`}>Profile</a></li>
-                        <li><a href='/forum'>Forum</a></li>
+                        <li><a href='/users'>Users</a></li>
                         {isAdmin &&
                             <li><a href='/admin'>Admin</a></li>
                         }
@@ -220,15 +224,15 @@ function ViewLogout() {
     });
 }
 
-function ViewForum() {
-    const [forumInfo, setForumInfo] = useState('');
+function ViewUsers() {
+    const [users, setUsers] = useState([]);
     const navigate = useNavigate();
 
     useEffect(() => {
         const init = async () => {
             try {
-                const response = await axios.get(`/api/forum`);
-                setForumInfo(response.data);
+                const response = await axios.get(`/api/users`);
+                setUsers(response.data);
             }
             catch (error) {
                 navigate('/');
@@ -240,8 +244,17 @@ function ViewForum() {
 
     return (
         <div className="App">
-            <h1>Forum</h1>
-            <p>{forumInfo}</p>
+            <h1>Users</h1>
+            <Table style={{ width: '800px' }}>
+                <TableBody>
+                    {users.map((did, index) => (
+                        <TableRow key={index}>
+                            <TableCell>{index+1}</TableCell>
+                            <TableCell><a href={`/profile/${did}`}>{did}</a></TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
         </div>
     )
 }
@@ -298,7 +311,7 @@ function ViewProfile() {
         };
 
         init();
-    }, [navigate]);
+    }, [did, navigate]);
 
     async function saveName() {
         try {
@@ -328,7 +341,6 @@ function ViewProfile() {
     return (
         <div className="App">
             <h1>Profile</h1>
-            <pre>{JSON.stringify(profile, null, 4)}</pre>
             <Table style={{ width: '800px' }}>
                 <TableBody>
                     <TableRow>
