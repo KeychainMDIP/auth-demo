@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from 'react-router-dom';
 import {
     useNavigate,
+    useParams,
     BrowserRouter as Router,
+    Link,
     Routes,
     Route,
 } from "react-router-dom";
@@ -27,6 +28,21 @@ function App() {
             </Routes>
         </Router>
     );
+}
+
+function Header({ title }) {
+    return (
+        <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={3}>
+            <Grid item>
+                <Link to="/">
+                    <img src="/demo.png" alt="home" />
+                </Link>
+            </Grid>
+            <Grid item>
+                <h1>{title}</h1>
+            </Grid>
+        </Grid>
+    )
 }
 
 function Home() {
@@ -73,8 +89,7 @@ function Home() {
 
     return (
         <div className="App">
-            <h1>Home</h1>
-
+            <Header title="Home" />
             <Grid container style={{ width: '800px' }}>
                 <Grid item xs={true}>
                     <h2>MDIP auth demo</h2>
@@ -165,7 +180,7 @@ function ViewLogin() {
 
     return (
         <div className="App">
-            <h1>Login</h1>
+            <Header title="Login" />
             <Table style={{ width: '800px' }}>
                 <TableBody>
                     <TableRow>
@@ -244,12 +259,12 @@ function ViewUsers() {
 
     return (
         <div className="App">
-            <h1>Users</h1>
+            <Header title="Users" />
             <Table style={{ width: '800px' }}>
                 <TableBody>
                     {users.map((did, index) => (
                         <TableRow key={index}>
-                            <TableCell>{index+1}</TableCell>
+                            <TableCell>{index + 1}</TableCell>
                             <TableCell><a href={`/profile/${did}`}>{did}</a></TableCell>
                         </TableRow>
                     ))}
@@ -279,7 +294,7 @@ function ViewAdmin() {
 
     return (
         <div className="App">
-            <h1>Admin</h1>
+            <Header title="Admin" />
             <pre>{JSON.stringify(adminInfo, null, 4)}</pre>
         </div>
     )
@@ -340,7 +355,7 @@ function ViewProfile() {
 
     return (
         <div className="App">
-            <h1>Profile</h1>
+            <Header title="Profile" />
             <Table style={{ width: '800px' }}>
                 <TableBody>
                     <TableRow>
