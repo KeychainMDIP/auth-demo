@@ -113,7 +113,7 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-app.post('/api/logout', (req, res) => {
+app.post('/api/logout', async (req, res) => {
     try {
         req.session.destroy();
         res.redirect('/login');
@@ -123,7 +123,7 @@ app.post('/api/logout', (req, res) => {
     }
 });
 
-app.get('/api/check-auth', (req, res) => {
+app.get('/api/check-auth', async (req, res) => {
     try {
         const isAuthenticated = req.session.user ? true : false;
         const userDID = isAuthenticated ? req.session.user.did : null;
@@ -160,7 +160,7 @@ app.get('/api/check-auth', (req, res) => {
     }
 });
 
-app.get('/api/forum', isAuthenticated, (req, res) => {
+app.get('/api/forum', isAuthenticated, async (req, res) => {
     try {
         res.json('forum info');
     }
@@ -169,7 +169,7 @@ app.get('/api/forum', isAuthenticated, (req, res) => {
     }
 });
 
-app.get('/api/admin', isAdmin, (req, res) => {
+app.get('/api/admin', isAdmin, async (req, res) => {
     try {
         res.json(loadDb());
     }
@@ -178,7 +178,7 @@ app.get('/api/admin', isAdmin, (req, res) => {
     }
 });
 
-app.get('/api/profile/:did', (req, res) => {
+app.get('/api/profile/:did', async (req, res) => {
     try {
         const did = req.params.did;
         const db = loadDb();
@@ -195,6 +195,44 @@ app.get('/api/profile/:did', (req, res) => {
         res.json(profile);
     }
     catch (error) {
+        res.status(500).send(error.toString());
+    }
+});
+
+app.get('/api/profile/:did/name', async (req, res) => {
+    try {
+        const did = req.params.did;
+        const db = loadDb();
+
+        if (!Object.keys(db.users).includes(did)) {
+            return res.status(404).send("Not found");
+        }
+
+        const profile = db.users[did];
+        res.json({ name: profile.name });
+    }
+    catch (error) {
+        res.status(500).send(error.toString());
+    }
+});
+
+app.put('/api/profile/:did/name', isAuthenticated, async (req, res) => {
+    try {
+        const did = req.params.did;
+        const { name } = req.body;
+
+        if (req.session.user.did !== did) {
+            return res.status(403).json({ message: 'Forbidden' });;
+        }
+
+        const db = loadDb();
+        db.users[did].name = name;
+        writeDb(db);
+
+        res.json({ ok: true, message: `name set to ${name}` });
+    }
+    catch (error) {
+        console.log(error);
         res.status(500).send(error.toString());
     }
 });

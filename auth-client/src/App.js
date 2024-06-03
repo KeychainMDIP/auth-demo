@@ -276,7 +276,8 @@ function ViewProfile() {
     const { did } = useParams();
     const navigate = useNavigate();
     const [profile, setProfile] = useState(null);
-    const [userName, setUserName] = useState("");
+    const [oldName, setOldName] = useState("");
+    const [newName, setNewName] = useState("");
 
     useEffect(() => {
         const init = async () => {
@@ -287,7 +288,8 @@ function ViewProfile() {
                 setProfile(profile);
 
                 if (profile.name) {
-                    setUserName(profile.name);
+                    setOldName(profile.name);
+                    setNewName(profile.name);
                 }
             }
             catch (error) {
@@ -297,6 +299,19 @@ function ViewProfile() {
 
         init();
     }, [navigate]);
+
+    async function saveName() {
+        try {
+            const name = newName.trim();
+            await axios.put(`/api/profile/${profile.did}/name`, { name });
+            setNewName(name);
+            setOldName(name);
+            profile.name = name;
+        }
+        catch (error) {
+            window.alert(error);
+        }
+    }
 
     function formatDate(time) {
         const date = new Date(time);
@@ -340,17 +355,26 @@ function ViewProfile() {
                         <TableCell>Name:</TableCell>
                         <TableCell>
                             {profile.isUser ? (
-                                <TextField
-                                    label=""
-                                    style={{ width: '300px' }}
-                                    value={userName}
-                                    onChange={(e) => setUserName(e.target.value)}
-                                    fullWidth
-                                    margin="normal"
-                                    inputProps={{ maxLength: 20 }}
-                                />
+                                <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={3}>
+                                    <Grid item>
+                                        <TextField
+                                            label=""
+                                            style={{ width: '300px' }}
+                                            value={newName}
+                                            onChange={(e) => setNewName(e.target.value)}
+                                            fullWidth
+                                            margin="normal"
+                                            inputProps={{ maxLength: 20 }}
+                                        />
+                                    </Grid>
+                                    <Grid item>
+                                        <Button variant="contained" color="primary" onClick={saveName} disabled={newName === oldName}>
+                                            Save
+                                        </Button>
+                                    </Grid>
+                                </Grid>
                             ) : (
-                                userName
+                                oldName
                             )}
                         </TableCell>
                     </TableRow>
