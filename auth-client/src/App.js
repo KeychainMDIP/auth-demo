@@ -21,8 +21,10 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<ViewLogin />} />
                 <Route path="/logout" element={<ViewLogout />} />
-                <Route path="/users" element={<ViewUsers />} />
-                <Route path="/admin" element={<ViewAdmin />} />
+                <Route path="/members" element={<ViewMembers />} />
+                <Route path="/moderators" element={<ViewModerators />} />
+                <Route path="/admins" element={<ViewAdmins />} />
+                <Route path="/owner" element={<ViewOwner />} />
                 <Route path="/profile/:did" element={<ViewProfile />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
@@ -47,7 +49,7 @@ function Header({ title }) {
 
 function Home() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isAdmin, setIsAdmin] = useState(false);
+    const [auth, setAuth] = useState(null);
     const [userDID, setUserDID] = useState('');
     const [userName, setUserName] = useState('');
     const [logins, setLogins] = useState(0);
@@ -59,8 +61,8 @@ function Home() {
             try {
                 const response = await axios.get(`/api/check-auth`);
                 const auth = response.data;
+                setAuth(auth);
                 setIsAuthenticated(auth.isAuthenticated);
-                setIsAdmin(auth.isAdmin);
                 setUserDID(auth.userDID);
 
                 if (auth.profile) {
@@ -118,9 +120,17 @@ function Home() {
                     You have access to the following pages:
                     <ul>
                         <li><a href={`/profile/${userDID}`}>Profile</a></li>
-                        <li><a href='/users'>Users</a></li>
-                        {isAdmin &&
-                            <li><a href='/admin'>Admin</a></li>
+                        {auth.isMember &&
+                            <li><a href='/members'>Members Area</a></li>
+                        }
+                        {auth.isModerator &&
+                            <li><a href='/moderators'>Moderators Area</a></li>
+                        }
+                        {auth.isAdmin &&
+                            <li><a href='/admins'>Admins Area</a></li>
+                        }
+                        {auth.isOwner &&
+                            <li><a href='/owner'>Owner Area</a></li>
                         }
                     </ul>
                 </Box>
@@ -239,7 +249,16 @@ function ViewLogout() {
     });
 }
 
-function ViewUsers() {
+function ViewMembers() {
+    return (
+        <div className="App">
+            <Header title="Members Area" />
+            <p>Members Area TBD</p>
+        </div>
+    )
+}
+
+function ViewModerators() {
     const [users, setUsers] = useState([]);
     const navigate = useNavigate();
 
@@ -259,7 +278,8 @@ function ViewUsers() {
 
     return (
         <div className="App">
-            <Header title="Users" />
+            <Header title="Moderators Area" />
+            <h2>Users</h2>
             <Table style={{ width: '800px' }}>
                 <TableBody>
                     {users.map((did, index) => (
@@ -274,7 +294,16 @@ function ViewUsers() {
     )
 }
 
-function ViewAdmin() {
+function ViewAdmins() {
+    return (
+        <div className="App">
+            <Header title="Admins Area" />
+            <p>Admins have the ability to set roles for other users</p>
+        </div>
+    )
+}
+
+function ViewOwner() {
     const [adminInfo, setAdminInfo] = useState(null);
     const navigate = useNavigate();
 
@@ -294,7 +323,8 @@ function ViewAdmin() {
 
     return (
         <div className="App">
-            <Header title="Admin" />
+            <Header title="Owner Area" />
+            <h2>database</h2>
             <pre>{JSON.stringify(adminInfo, null, 4)}</pre>
         </div>
     )
