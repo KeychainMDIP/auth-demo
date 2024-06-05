@@ -250,6 +250,26 @@ function ViewLogout() {
 }
 
 function ViewMembers() {
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const init = async () => {
+            try {
+                const response = await axios.get(`/api/check-auth`);
+                const auth = response.data;
+
+                if (!auth.isMember) {
+                    navigate('/');
+                }
+            }
+            catch (error) {
+                navigate('/');
+            }
+        };
+
+        init();
+    }, [navigate]);
+
     return (
         <div className="App">
             <Header title="Members Area" />
@@ -295,6 +315,26 @@ function ViewModerators() {
 }
 
 function ViewAdmins() {
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const init = async () => {
+            try {
+                const response = await axios.get(`/api/check-auth`);
+                const auth = response.data;
+
+                if (!auth.isAdmin) {
+                    navigate('/');
+                }
+            }
+            catch (error) {
+                navigate('/');
+            }
+        };
+
+        init();
+    }, [navigate]);
+
     return (
         <div className="App">
             <Header title="Admins Area" />
