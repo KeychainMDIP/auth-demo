@@ -39,6 +39,19 @@ function writeDb(db) {
     fs.writeFileSync(dbName, JSON.stringify(db, null, 4));
 }
 
+async function verifyDb() {
+    console.log('verifying db...');
+
+    const db = loadDb();
+
+    if (db.admin) {
+        db.owner = db.admin;
+        delete db.admin;
+    }
+
+    writeDb(db);
+}
+
 function isAuthenticated(req, res, next) {
     if (req.session.user) {
         return next();
@@ -50,7 +63,7 @@ function isAdmin(req, res, next) {
     isAuthenticated(req, res, () => {
         const db = loadDb();
 
-        if (req.session.user.did === db.admin) {
+        if (req.session.user.did === db.owner) {
             return next();
         }
         res.status(403).send('Admin access required');
@@ -101,6 +114,7 @@ app.post('/api/login', async (req, res) => {
                     firstLogin: now,
                     lastLogin: now,
                     logins: 1,
+                    role: 'Member',
                 }
             }
 
@@ -127,29 +141,53 @@ app.get('/api/check-auth', async (req, res) => {
     try {
         const isAuthenticated = req.session.user ? true : false;
         const userDID = isAuthenticated ? req.session.user.did : null;
-        const roles = [];
         const db = loadDb();
-        let isAdmin = false;
 
-        if (userDID) {
-            if (db.admin) {
-                isAdmin = userDID === db.admin;
-            }
-            else {
-                // First user to login gets admin status
-                db.admin = userDID;
-                isAdmin = true;
-                writeDb(db);
-            }
+        let isOwner = false;
+        let isAdmin = false;
+        let isModerator = false;
+        let isMember = false;
+
+        if (userDID && !db.owner) {
+            // First user to login gets owner status
+            db.owner = userDID;
+            db.users[userDID].role = "Owner";
+            writeDb(db);
         }
 
         const profile = isAuthenticated ? db.users[userDID] : null;
 
+        if (profile) {
+            if (profile.role === "Owner") {
+                isOwner = true;
+                isAdmin = true;
+                isModerator = true;
+                isMember = true;
+            }
+
+            if (profile.role === "Admin") {
+                isAdmin = true;
+                isModerator = true;
+                isMember = true;
+            }
+
+            if (profile.role === "Moderator") {
+                isModerator = true;
+                isMember = true;
+            }
+
+            if (profile.role === "Member") {
+                isMember = true;
+            }
+        }
+
         const auth = {
             isAuthenticated,
             userDID,
+            isOwner,
             isAdmin,
-            roles,
+            isModerator,
+            isMember,
             profile,
         };
 
@@ -239,6 +277,55 @@ app.put('/api/profile/:did/name', isAuthenticated, async (req, res) => {
     }
 });
 
+const validRoles = ['Admin', 'Moderator', 'Member'];
+
+app.get('/api/roles', async (req, res) => {
+    try {
+        res.json(validRoles);
+    }
+    catch (error) {
+        res.status(500).send(error.toString());
+    }
+});
+
+app.get('/api/profile/:did/role', isAuthenticated, async (req, res) => {
+    try {
+        const did = req.params.did;
+        const db = loadDb();
+
+        if (!Object.keys(db.users).includes(did)) {
+            return res.status(404).send("Not found");
+        }
+
+        const profile = db.users[did];
+        res.json({ role: profile.role });
+    }
+    catch (error) {
+        res.status(500).send(error.toString());
+    }
+});
+
+app.put('/api/profile/:did/role', isAdmin, async (req, res) => {
+    try {
+        const did = req.params.did;
+        const { role } = req.body;
+
+        if (!validRoles.includes(role)) {
+            return res.status(400).send(`valid roles include ${validRoles}`);
+        }
+
+        const db = loadDb();
+        db.users[did].role = role;
+        writeDb(db);
+
+        res.json({ ok: true, message: `role set to ${role}` });
+    }
+    catch (error) {
+        console.log(error);
+        res.status(500).send(error.toString());
+    }
+});
+
 app.use((req, res) => {
     if (!req.path.startsWith('/api')) {
         res.sendFile(path.join(__dirname, 'auth-client/build', 'index.html'));
@@ -262,6 +349,7 @@ const options = {
     cert: fs.readFileSync(`${domain}.pem`)
 };
 
-https.createServer(options, app).listen(port, () => {
+https.createServer(options, app).listen(port, async () => {
+    await verifyDb();
     console.log(`auth-demo listening at https://${domain}:${port}`);
 });

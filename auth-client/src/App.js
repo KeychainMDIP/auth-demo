@@ -7,7 +7,7 @@ import {
     Routes,
     Route,
 } from "react-router-dom";
-import { Box, Button, Grid, TextField, Typography } from '@mui/material';
+import { Box, Button, Grid, Select, MenuItem, TextField, Typography } from '@mui/material';
 import { Table, TableBody, TableRow, TableCell } from '@mui/material';
 import axios from 'axios';
 import { format, differenceInDays } from 'date-fns';
@@ -303,22 +303,38 @@ function ViewAdmin() {
 function ViewProfile() {
     const { did } = useParams();
     const navigate = useNavigate();
+    const [auth, setAuth] = useState(null);
     const [profile, setProfile] = useState(null);
-    const [oldName, setOldName] = useState("");
+    const [currentName, setCurrentName] = useState("");
     const [newName, setNewName] = useState("");
+    const [roleList, setRoleList] = useState([]);
+    const [currentRole, setCurrentRole] = useState("");
+    const [newRole, setNewRole] = useState("");
 
     useEffect(() => {
         const init = async () => {
             try {
-                const response = await axios.get(`/api/profile/${did}`);
-                const profile = response.data;
+                const getAuth = await axios.get(`/api/check-auth`);
+                const auth = getAuth.data;
+
+                setAuth(auth);
+
+                const getProfile = await axios.get(`/api/profile/${did}`);
+                const profile = getProfile.data;
 
                 setProfile(profile);
 
                 if (profile.name) {
-                    setOldName(profile.name);
+                    setCurrentName(profile.name);
                     setNewName(profile.name);
                 }
+
+                if (profile.role) {
+                    setCurrentRole(profile.role);
+                    setNewRole(profile.role);
+                }
+
+                setRoleList(['Admin', 'Moderator', 'Member']);
             }
             catch (error) {
                 navigate('/');
@@ -333,8 +349,21 @@ function ViewProfile() {
             const name = newName.trim();
             await axios.put(`/api/profile/${profile.did}/name`, { name });
             setNewName(name);
-            setOldName(name);
+            setCurrentName(name);
             profile.name = name;
+        }
+        catch (error) {
+            window.alert(error);
+        }
+    }
+
+    async function saveRole() {
+        try {
+            const role = newRole;
+            await axios.put(`/api/profile/${profile.did}/role`, { role });
+            setNewRole(role);
+            setCurrentRole(role);
+            profile.role = role;
         }
         catch (error) {
             window.alert(error);
@@ -395,13 +424,47 @@ function ViewProfile() {
                                         />
                                     </Grid>
                                     <Grid item>
-                                        <Button variant="contained" color="primary" onClick={saveName} disabled={newName === oldName}>
+                                        <Button variant="contained" color="primary" onClick={saveName} disabled={newName === currentName}>
                                             Save
                                         </Button>
                                     </Grid>
                                 </Grid>
                             ) : (
-                                oldName
+                                currentName
+                            )}
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>Role:</TableCell>
+                        <TableCell>
+                            {auth.isAdmin && currentRole !== 'Owner' ? (
+                                <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={3}>
+                                    <Grid item>
+                                        <Select
+                                            style={{ width: '300px' }}
+                                            value={newRole}
+                                            fullWidth
+                                            displayEmpty
+                                            onChange={(event) => setNewRole(event.target.value)}
+                                        >
+                                            <MenuItem value="" disabled>
+                                                Select role
+                                            </MenuItem>
+                                            {roleList.map((role, index) => (
+                                                <MenuItem value={role} key={index}>
+                                                    {role}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </Grid>
+                                    <Grid item>
+                                        <Button variant="contained" color="primary" onClick={saveRole} disabled={newRole === currentRole}>
+                                            Save
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            ) : (
+                                currentRole
                             )}
                         </TableCell>
                     </TableRow>
