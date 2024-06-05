@@ -95,7 +95,13 @@ app.post('/api/login', async (req, res) => {
         if (verify.match) {
             const docs = await keymaster.resolveDID(response);
             const did = docs.didDocument.controller;
-            req.session.user = { did };
+            req.session.user = {
+                response,
+                challenge,
+                did,
+                docs,
+                verify,
+            };
 
             const db = loadDb();
 
