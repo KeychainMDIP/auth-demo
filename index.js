@@ -138,7 +138,7 @@ async function setRole(user, role) {
         const currentRole = await getRole(user);
 
         if (currentRole === 'Owner' || role === currentRole) {
-            return;
+            return currentRole;
         }
 
         if (currentRole === 'Admin') {
