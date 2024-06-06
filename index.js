@@ -49,6 +49,8 @@ function writeDb(db) {
 let ownerDID = null;
 
 async function verifyRoles() {
+    const currentId = await keymaster.getCurrentId();
+
     try {
         const docs = await keymaster.resolveDID(roles.owner);
         ownerDID = docs.didDocument.id;
@@ -93,6 +95,8 @@ async function verifyRoles() {
         await keymaster.addName(roles.member, did);
         await keymaster.groupAdd(roles.member, roles.moderator);
     }
+
+    await keymaster.setCurrentId(currentId);
 }
 
 async function getRole(user) {
@@ -127,14 +131,15 @@ async function getRole(user) {
 }
 
 async function setRole(user, role) {
+    const currentId = await keymaster.getCurrentId();
+    await keymaster.setCurrentId(roles.owner);
+
     try {
         const currentRole = await getRole(user);
 
         if (currentRole === 'Owner' || role === currentRole) {
             return;
         }
-
-        await keymaster.setCurrentId(roles.owner);
 
         if (currentRole === 'Admin') {
             await keymaster.groupRemove(roles.admin, user);
@@ -164,7 +169,18 @@ async function setRole(user, role) {
         console.log(error);
     }
 
-    return getRole(user);
+    await keymaster.setCurrentId(currentId);
+    return await getRole(user);
+}
+
+async function addMember(userDID) {
+    // TBD We have to cache the current id only until we fix groupAdd to not use the current id
+    const currentId = await keymaster.getCurrentId();
+    await keymaster.setCurrentId(roles.owner);
+    await keymaster.groupAdd(roles.member, userDID);
+    await keymaster.setCurrentId(currentId);
+
+    return await getRole(userDID);
 }
 
 async function userInRole(user, role) {
@@ -195,9 +211,7 @@ async function verifyDb() {
         }
         else {
             console.log(`Adding user ${userDID} to ${roles.member}...`);
-            await keymaster.setCurrentId(roles.owner);
-            await keymaster.groupAdd(roles.member, userDID);
-            role = await getRole(userDID);
+            role = await addMember(userDID);
         }
         db.users[userDID].role = role;
     }
@@ -271,13 +285,7 @@ app.post('/api/login', async (req, res) => {
                 db.users[did].logins += 1;
             }
             else {
-                let role = await getRole(did);
-
-                if (!role) {
-                    await keymaster.setCurrentId(roles.owner);
-                    await keymaster.groupAdd(roles.member, did);
-                    role = await getRole(did);
-                }
+                const role = await getRole(did) || await addMember(did);
 
                 db.users[did] = {
                     firstLogin: now,
