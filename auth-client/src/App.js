@@ -89,6 +89,15 @@ function Home() {
         navigate('/logout');
     }
 
+    if (!auth) {
+        return (
+            <div className="App">
+                <Header title="Home" />
+                <p>Loading...</p>
+            </div>
+        )
+    }
+
     return (
         <div className="App">
             <Header title="Home" />

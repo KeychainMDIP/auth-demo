@@ -198,25 +198,22 @@ async function verifyDb() {
 
     const db = loadDb();
 
-    if (db.admin) {
-        db.owner = db.admin;
-        delete db.admin;
-    }
+    if (db.users) {
+        for (const userDID of Object.keys(db.users)) {
+            let role = await getRole(userDID);
 
-    for (const userDID of Object.keys(db.users)) {
-        let role = await getRole(userDID);
-
-        if (role) {
-            console.log(`User ${userDID} verified in role ${role}`);
+            if (role) {
+                console.log(`User ${userDID} verified in role ${role}`);
+            }
+            else {
+                console.log(`Adding user ${userDID} to ${roles.member}...`);
+                role = await addMember(userDID);
+            }
+            db.users[userDID].role = role;
         }
-        else {
-            console.log(`Adding user ${userDID} to ${roles.member}...`);
-            role = await addMember(userDID);
-        }
-        db.users[userDID].role = role;
-    }
 
-    writeDb(db);
+        writeDb(db);
+    }
 }
 
 function isAuthenticated(req, res, next) {
