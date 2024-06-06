@@ -119,18 +119,18 @@ function Home() {
                     <br />
                     You have access to the following pages:
                     <ul>
-                        <li><a href={`/profile/${userDID}`}>Profile</a></li>
+                        <li><Link to={`/profile/${userDID}`}>Profile</Link></li>
                         {auth.isMember &&
-                            <li><a href='/members'>Members Area</a></li>
+                            <li><Link to='/members'>Members Area</Link></li>
                         }
                         {auth.isModerator &&
-                            <li><a href='/moderators'>Moderators Area</a></li>
+                            <li><Link to='/moderators'>Moderators Area</Link></li>
                         }
                         {auth.isAdmin &&
-                            <li><a href='/admins'>Admins Area</a></li>
+                            <li><Link to='/admins'>Admins Area</Link></li>
                         }
                         {auth.isOwner &&
-                            <li><a href='/owner'>Owner Area</a></li>
+                            <li><Link to='/owner'>Owner Area</Link></li>
                         }
                     </ul>
                 </Box>
@@ -146,6 +146,7 @@ function Home() {
 function ViewLogin() {
     const [challengeDID, setChallengeDID] = useState('');
     const [responseDID, setResponseDID] = useState('');
+    const [loggingIn, setLoggingIn] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -163,6 +164,8 @@ function ViewLogin() {
     }, []);
 
     async function login() {
+        setLoggingIn(true);
+
         try {
             const getAuth = await axios.post(`/api/login`, { challenge: challengeDID, response: responseDID });
 
@@ -176,6 +179,8 @@ function ViewLogin() {
         catch (error) {
             window.alert(error);
         }
+
+        setLoggingIn(false);
     }
 
     async function copyToClipboard(text) {
@@ -220,7 +225,7 @@ function ViewLogin() {
                             />
                         </TableCell>
                         <TableCell>
-                            <Button variant="contained" color="primary" onClick={login} disabled={!responseDID}>
+                            <Button variant="contained" color="primary" onClick={login} disabled={!responseDID || loggingIn}>
                                 Login
                             </Button>
                         </TableCell>
@@ -305,7 +310,7 @@ function ViewModerators() {
                     {users.map((did, index) => (
                         <TableRow key={index}>
                             <TableCell>{index + 1}</TableCell>
-                            <TableCell><a href={`/profile/${did}`}>{did}</a></TableCell>
+                            <TableCell><Link to={`/profile/${did}`}>{did}</Link></TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
@@ -449,7 +454,12 @@ function ViewProfile() {
     }
 
     if (!profile) {
-        return <p></p>;
+        return (
+            <div className="App">
+                <Header title="Profile" />
+                <p>Loading...</p>
+            </div>
+        )
     }
 
     return (
