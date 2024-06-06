@@ -95,17 +95,76 @@ async function verifyRoles() {
     }
 }
 
-async function verifyDb() {
-    console.log('verifying db...');
+async function getRole(user) {
+    try {
+        if (user === ownerDID) {
+            return 'Owner';
+        }
 
-    const db = loadDb();
+        const isAdmin = await keymaster.groupTest(roles.admin, user);
 
-    if (db.admin) {
-        db.owner = db.admin;
-        delete db.admin;
+        if (isAdmin) {
+            return 'Admin';
+        }
+
+        const isModerator = await keymaster.groupTest(roles.moderator, user);
+
+        if (isModerator) {
+            return 'Moderator';
+        }
+
+        const isMember = await keymaster.groupTest(roles.member, user);
+
+        if (isMember) {
+            return 'Member';
+        }
+
+        return null;
+    }
+    catch {
+        return null;
+    }
+}
+
+async function setRole(user, role) {
+    try {
+        const currentRole = await getRole(user);
+
+        if (currentRole === 'Owner' || role === currentRole) {
+            return;
+        }
+
+        await keymaster.setCurrentId(roles.owner);
+
+        if (currentRole === 'Admin') {
+            await keymaster.groupRemove(roles.admin, user);
+        }
+
+        if (currentRole === 'Moderator') {
+            await keymaster.groupRemove(roles.moderator, user);
+        }
+
+        if (currentRole === 'Member') {
+            await keymaster.groupRemove(roles.member, user);
+        }
+
+        if (role === 'Admin') {
+            await keymaster.groupAdd(roles.admin, user);
+        }
+
+        if (role === 'Moderator') {
+            await keymaster.groupAdd(roles.moderator, user);
+        }
+
+        if (role === 'Member') {
+            await keymaster.groupAdd(roles.member, user);
+        }
+    }
+    catch (error) {
+        console.log(error);
     }
 
-    writeDb(db);
+    return getRole(user);
 }
 
 async function userInRole(user, role) {
@@ -116,6 +175,34 @@ async function userInRole(user, role) {
     catch {
         return false;
     }
+}
+
+async function verifyDb() {
+    console.log('verifying db...');
+
+    const db = loadDb();
+
+    if (db.admin) {
+        db.owner = db.admin;
+        delete db.admin;
+    }
+
+    for (const userDID of Object.keys(db.users)) {
+        let role = await getRole(userDID);
+
+        if (role) {
+            console.log(`User ${userDID} verified in role ${role}`);
+        }
+        else {
+            console.log(`Adding user ${userDID} to ${roles.member}...`);
+            await keymaster.setCurrentId(roles.owner);
+            await keymaster.groupAdd(roles.member, userDID);
+            role = await getRole(userDID);
+        }
+        db.users[userDID].role = role;
+    }
+
+    writeDb(db);
 }
 
 function isAuthenticated(req, res, next) {
@@ -140,6 +227,7 @@ app.get('/api/version', async (req, res) => {
     try {
         res.json(1);
     } catch (error) {
+        console.log(error);
         res.status(500).send(error.toString());
     }
 });
@@ -149,43 +237,12 @@ app.get('/api/challenge', async (req, res) => {
         const challenge = await keymaster.createChallenge();
         res.json(challenge);
     } catch (error) {
+        console.log(error);
         res.status(500).send(error.toString());
     }
 });
 
 app.post('/api/login', async (req, res) => {
-
-    async function getRole(user) {
-        try {
-            if (user === ownerDID) {
-                return 'Owner';
-            }
-
-            const isAdmin = await keymaster.groupTest(roles.admin, user);
-
-            if (isAdmin) {
-                return 'Admin';
-            }
-
-            const isModerator = await keymaster.groupTest(roles.moderator, user);
-
-            if (isModerator) {
-                return 'Moderator';
-            }
-
-            const isMember = await keymaster.groupTest(roles.member, user);
-
-            if (!isMember) {
-                await keymaster.groupAdd(roles.member, user);
-            }
-
-            return 'Member';
-        }
-        catch {
-            return null;
-        }
-    }
-
     try {
         const { response, challenge } = req.body;
         const verify = await keymaster.verifyResponse(response, challenge);
@@ -214,7 +271,13 @@ app.post('/api/login', async (req, res) => {
                 db.users[did].logins += 1;
             }
             else {
-                const role = await getRole(did);
+                let role = await getRole(did);
+
+                if (!role) {
+                    await keymaster.setCurrentId(roles.owner);
+                    await keymaster.groupAdd(roles.member, did);
+                    role = await getRole(did);
+                }
 
                 db.users[did] = {
                     firstLogin: now,
@@ -229,6 +292,7 @@ app.post('/api/login', async (req, res) => {
 
         res.json({ authenticated: verify.match });
     } catch (error) {
+        console.log(error);
         res.status(500).send(error.toString());
     }
 });
@@ -239,6 +303,7 @@ app.post('/api/logout', async (req, res) => {
         res.redirect('/login');
     }
     catch (error) {
+        console.log(error);
         res.status(500).send(error.toString());
     }
 });
@@ -276,6 +341,7 @@ app.get('/api/check-auth', async (req, res) => {
         res.json(auth);
     }
     catch (error) {
+        console.log(error);
         res.status(500).send(error.toString());
     }
 });
@@ -287,6 +353,7 @@ app.get('/api/users', isAuthenticated, async (req, res) => {
         res.json(users);
     }
     catch (error) {
+        console.log(error);
         res.status(500).send(error.toString());
     }
 });
@@ -296,6 +363,7 @@ app.get('/api/admin', isAdmin, async (req, res) => {
         res.json(loadDb());
     }
     catch (error) {
+        console.log(error);
         res.status(500).send(error.toString());
     }
 });
@@ -312,11 +380,13 @@ app.get('/api/profile/:did', isAuthenticated, async (req, res) => {
         const profile = db.users[did];
 
         profile.did = did;
+        profile.role = await getRole(did);
         profile.isUser = (req.session?.user?.did === did);
 
         res.json(profile);
     }
     catch (error) {
+        console.log(error);
         res.status(500).send(error.toString());
     }
 });
@@ -334,6 +404,7 @@ app.get('/api/profile/:did/name', isAuthenticated, async (req, res) => {
         res.json({ name: profile.name });
     }
     catch (error) {
+        console.log(error);
         res.status(500).send(error.toString());
     }
 });
@@ -366,6 +437,7 @@ app.get('/api/roles', async (req, res) => {
         res.json(validRoles);
     }
     catch (error) {
+        console.log(error);
         res.status(500).send(error.toString());
     }
 });
@@ -383,6 +455,7 @@ app.get('/api/profile/:did/role', isAuthenticated, async (req, res) => {
         res.json({ role: profile.role });
     }
     catch (error) {
+        console.log(error);
         res.status(500).send(error.toString());
     }
 });
@@ -397,7 +470,7 @@ app.put('/api/profile/:did/role', isAdmin, async (req, res) => {
         }
 
         const db = loadDb();
-        db.users[did].role = role;
+        db.users[did].role = setRole(did, role);
         writeDb(db);
 
         res.json({ ok: true, message: `role set to ${role}` });
