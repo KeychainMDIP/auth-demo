@@ -12,6 +12,13 @@ const port = 3000;
 const domain = 'localhost';
 const dbName = 'data/db.json';
 
+const roles = {
+    owner: 'auth-demo-owner',
+    admin: 'auth-demo-admin',
+    moderator: 'auth-demo-moderator',
+    member: 'auth-demo-member',
+};
+
 app.use(morgan('dev'));
 app.use(express.json());
 
@@ -39,6 +46,55 @@ function writeDb(db) {
     fs.writeFileSync(dbName, JSON.stringify(db, null, 4));
 }
 
+let ownerDID = null;
+
+async function verifyRoles() {
+    try {
+        const docs = await keymaster.resolveDID(roles.owner);
+        ownerDID = docs.didDocument.id;
+        console.log(`${roles.owner}: ${ownerDID}`);
+    }
+    catch (error) {
+        console.log(`Creating ID ${roles.owner}`);
+        ownerDID = await keymaster.createId(roles.owner);
+    }
+
+    await keymaster.setCurrentId(roles.owner);
+
+    try {
+        const docs = await keymaster.resolveDID(roles.admin);
+        console.log(`${roles.admin}: ${docs.didDocument.id}`);
+    }
+    catch (error) {
+        console.log(`Creating group ${roles.admin}`);
+        const did = await keymaster.createGroup(roles.admin);
+        await keymaster.addName(roles.admin, did);
+        await keymaster.groupAdd(roles.admin, roles.owner);
+    }
+
+    try {
+        const docs = await keymaster.resolveDID(roles.moderator);
+        console.log(`${roles.moderator}: ${docs.didDocument.id}`);
+    }
+    catch (error) {
+        console.log(`Creating group ${roles.moderator}`);
+        const did = await keymaster.createGroup(roles.moderator);
+        await keymaster.addName(roles.moderator, did);
+        await keymaster.groupAdd(roles.moderator, roles.admin);
+    }
+
+    try {
+        const docs = await keymaster.resolveDID(roles.member);
+        console.log(`${roles.member}: ${docs.didDocument.id}`);
+    }
+    catch (error) {
+        console.log(`Creating group ${roles.member}`);
+        const did = await keymaster.createGroup(roles.member);
+        await keymaster.addName(roles.member, did);
+        await keymaster.groupAdd(roles.member, roles.moderator);
+    }
+}
+
 async function verifyDb() {
     console.log('verifying db...');
 
@@ -52,6 +108,16 @@ async function verifyDb() {
     writeDb(db);
 }
 
+async function userInRole(user, role) {
+    try {
+        const isMember = await keymaster.groupTest(role, user);
+        return isMember;
+    }
+    catch {
+        return false;
+    }
+}
+
 function isAuthenticated(req, res, next) {
     if (req.session.user) {
         return next();
@@ -63,7 +129,7 @@ function isAdmin(req, res, next) {
     isAuthenticated(req, res, () => {
         const db = loadDb();
 
-        if (req.session.user.did === db.owner) {
+        if (userInRole(req.session.user.did, roles.admin)) {
             return next();
         }
         res.status(403).send('Admin access required');
@@ -88,6 +154,38 @@ app.get('/api/challenge', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
+
+    async function getRole(user) {
+        try {
+            if (user === ownerDID) {
+                return 'Owner';
+            }
+
+            const isAdmin = await keymaster.groupTest(roles.admin, user);
+
+            if (isAdmin) {
+                return 'Admin';
+            }
+
+            const isModerator = await keymaster.groupTest(roles.moderator, user);
+
+            if (isModerator) {
+                return 'Moderator';
+            }
+
+            const isMember = await keymaster.groupTest(roles.member, user);
+
+            if (!isMember) {
+                await keymaster.groupAdd(roles.member, user);
+            }
+
+            return 'Member';
+        }
+        catch {
+            return null;
+        }
+    }
+
     try {
         const { response, challenge } = req.body;
         const verify = await keymaster.verifyResponse(response, challenge);
@@ -116,11 +214,13 @@ app.post('/api/login', async (req, res) => {
                 db.users[did].logins += 1;
             }
             else {
+                const role = await getRole(did);
+
                 db.users[did] = {
                     firstLogin: now,
                     lastLogin: now,
                     logins: 1,
-                    role: 'Member',
+                    role: role,
                 }
             }
 
@@ -154,37 +254,13 @@ app.get('/api/check-auth', async (req, res) => {
         let isModerator = false;
         let isMember = false;
 
-        if (userDID && !db.owner) {
-            // First user to login gets owner status
-            db.owner = userDID;
-            db.users[userDID].role = "Owner";
-            writeDb(db);
-        }
-
         const profile = isAuthenticated ? db.users[userDID] : null;
 
         if (profile) {
-            if (profile.role === "Owner") {
-                isOwner = true;
-                isAdmin = true;
-                isModerator = true;
-                isMember = true;
-            }
-
-            if (profile.role === "Admin") {
-                isAdmin = true;
-                isModerator = true;
-                isMember = true;
-            }
-
-            if (profile.role === "Moderator") {
-                isModerator = true;
-                isMember = true;
-            }
-
-            if (profile.role === "Member") {
-                isMember = true;
-            }
+            isOwner = (userDID === ownerDID);
+            isAdmin = await userInRole(userDID, roles.admin);
+            isModerator = await userInRole(userDID, roles.moderator);
+            isMember = await userInRole(userDID, roles.member);
         }
 
         const auth = {
@@ -356,6 +432,8 @@ const options = {
 };
 
 https.createServer(options, app).listen(port, async () => {
+    await keymaster.waitUntilReady();
+    await verifyRoles();
     await verifyDb();
     console.log(`auth-demo listening at https://${domain}:${port}`);
 });

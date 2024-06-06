@@ -10,6 +10,40 @@ function throwError(error) {
     throw error.message;
 }
 
+export async function waitUntilReady(intervalSeconds = 1, chatty = true) {
+    let ready = false;
+
+    if (chatty) {
+        console.log(`Connecting to Keymaster at ${URL}`);
+    }
+
+    while (!ready) {
+        ready = await isReady();
+
+        if (!ready) {
+            if (chatty) {
+                console.log('Waiting for Keymaster to be ready...');
+            }
+            // wait for 1 second before checking again
+            await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
+        }
+    }
+
+    if (chatty) {
+        console.log('Keymaster service is ready!');
+    }
+}
+
+export async function isReady() {
+    try {
+        const response = await axios.get(`${URL}/api/v1/ready`);
+        return response.data;
+    }
+    catch (error) {
+        return false;
+    }
+}
+
 export async function listRegistries() {
     try {
         const response = await axios.get(`${URL}/api/v1/registries`);
