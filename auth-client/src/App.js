@@ -499,7 +499,7 @@ function ViewProfile() {
                     <TableRow>
                         <TableCell>Name:</TableCell>
                         <TableCell>
-                            {profile.isUser ? (
+                            {profile.isUser && currentRole !== 'Owner' ? (
                                 <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={3}>
                                     <Grid item>
                                         <TextField

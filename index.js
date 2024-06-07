@@ -131,9 +131,6 @@ async function getRole(user) {
 }
 
 async function setRole(user, role) {
-    const currentId = await keymaster.getCurrentId();
-    await keymaster.setCurrentId(roles.owner);
-
     try {
         const currentRole = await getRole(user);
 
@@ -169,17 +166,11 @@ async function setRole(user, role) {
         console.log(error);
     }
 
-    await keymaster.setCurrentId(currentId);
     return await getRole(user);
 }
 
 async function addMember(userDID) {
-    // TBD We have to cache the current id only until we fix groupAdd to not use the current id
-    const currentId = await keymaster.getCurrentId();
-    await keymaster.setCurrentId(roles.owner);
     await keymaster.groupAdd(roles.member, userDID);
-    await keymaster.setCurrentId(currentId);
-
     return await getRole(userDID);
 }
 
@@ -209,7 +200,12 @@ async function verifyDb() {
                 console.log(`Adding user ${userDID} to ${roles.member}...`);
                 role = await addMember(userDID);
             }
+
             db.users[userDID].role = role;
+
+            if (role === 'Owner') {
+                db.users[userDID].name = roles.owner;
+            }
         }
 
         writeDb(db);
