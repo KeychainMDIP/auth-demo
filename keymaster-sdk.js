@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const URL = 'http://localhost:4226';
+let URL = '';
 
 function throwError(error) {
     if (error.response) {
@@ -8,6 +8,10 @@ function throwError(error) {
     }
 
     throw error.message;
+}
+
+export function setURL(url) {
+    URL = url;
 }
 
 export async function waitUntilReady(intervalSeconds = 1, chatty = true) {

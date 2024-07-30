@@ -506,6 +506,7 @@ const options = {
 };
 
 https.createServer(options, app).listen(port, async () => {
+    keymaster.setURL('http://localhost:4226');
     await keymaster.waitUntilReady();
     await verifyRoles();
     await verifyDb();
