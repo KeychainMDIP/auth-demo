@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const URL='http://localhost:4226';
+const URL = 'http://localhost:4226';
 
 function throwError(error) {
     if (error.response) {
@@ -44,6 +44,86 @@ export async function isReady() {
     }
 }
 
+export async function loadWallet() {
+    try {
+        const response = await axios.get(`${URL}/api/v1/wallet`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function saveWallet(wallet) {
+    try {
+        const response = await axios.put(`${URL}/api/v1/wallet`, { wallet });
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function newWallet(mnemonic, overwrite = false) {
+    try {
+        const response = await axios.post(`${URL}/api/v1/wallet/new`, { mnemonic, overwrite });
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function backupWallet() {
+    try {
+        const response = await axios.post(`${URL}/api/v1/wallet/backup`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function recoverWallet() {
+    try {
+        const response = await axios.post(`${URL}/api/v1/wallet/recover`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function checkWallet() {
+    try {
+        const response = await axios.post(`${URL}/api/v1/wallet/check`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function fixWallet() {
+    try {
+        const response = await axios.post(`${URL}/api/v1/wallet/fix`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function decryptMnemonic() {
+    try {
+        const response = await axios.get(`${URL}/api/v1/mnemonic`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
 export async function listRegistries() {
     try {
         const response = await axios.get(`${URL}/api/v1/registries`);
@@ -56,7 +136,7 @@ export async function listRegistries() {
 
 export async function getCurrentId() {
     try {
-        const response = await axios.get(`${URL}/api/v1/current-id`);
+        const response = await axios.get(`${URL}/api/v1/ids/current`);
         return response.data;
     }
     catch (error) {
@@ -66,7 +146,7 @@ export async function getCurrentId() {
 
 export async function setCurrentId(name) {
     try {
-        const response = await axios.put(`${URL}/api/v1/current-id`, { name: name });
+        const response = await axios.put(`${URL}/api/v1/ids/current`, { name: name });
         return response.data;
     }
     catch (error) {
@@ -96,7 +176,7 @@ export async function resolveId(id) {
 
 export async function createId(name, registry) {
     try {
-        const response = await axios.post(`${URL}/api/v1/ids`, { name: name, registry: registry });
+        const response = await axios.post(`${URL}/api/v1/ids/new`, { name: name, registry: registry });
         return response.data;
     }
     catch (error) {
@@ -126,7 +206,7 @@ export async function backupId(id) {
 
 export async function recoverId(did) {
     try {
-        const response = await axios.post(`${URL}/api/v1/recover-id`, { did: did });
+        const response = await axios.post(`${URL}/api/v1/ids/recover`, { did: did });
         return response.data;
     }
     catch (error) {
@@ -196,7 +276,7 @@ export async function createResponse(challengeDID) {
 
 export async function verifyResponse(responseDID, challengeDID) {
     try {
-        const response = await axios.post(`${URL}/api/v1/verify-response`, { response: responseDID, challenge: challengeDID });
+        const response = await axios.post(`${URL}/api/v1/response/verify`, { response: responseDID, challenge: challengeDID });
         return response.data;
     }
     catch (error) {
@@ -204,9 +284,9 @@ export async function verifyResponse(responseDID, challengeDID) {
     }
 }
 
-export async function createGroup(group) {
+export async function createGroup(name, registry) {
     try {
-        const response = await axios.post(`${URL}/api/v1/groups`, { name: group });
+        const response = await axios.post(`${URL}/api/v1/groups`, { name, registry });
         return response.data;
     }
     catch (error) {
@@ -226,7 +306,7 @@ export async function getGroup(group) {
 
 export async function groupAdd(group, member) {
     try {
-        const response = await axios.post(`${URL}/api/v1/groups/${group}/add`, { member: member });
+        const response = await axios.post(`${URL}/api/v1/groups/${group}/add`, { member });
         return response.data;
     }
     catch (error) {
@@ -236,7 +316,7 @@ export async function groupAdd(group, member) {
 
 export async function groupRemove(group, member) {
     try {
-        const response = await axios.post(`${URL}/api/v1/groups/${group}/remove`, { member: member });
+        const response = await axios.post(`${URL}/api/v1/groups/${group}/remove`, { member });
         return response.data;
     }
     catch (error) {
@@ -246,7 +326,157 @@ export async function groupRemove(group, member) {
 
 export async function groupTest(group, member) {
     try {
-        const response = await axios.post(`${URL}/api/v1/groups/${group}/test`, { member: member });
+        const response = await axios.post(`${URL}/api/v1/groups/${group}/test`, { member });
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function createSchema(schema, registry) {
+    try {
+        const response = await axios.post(`${URL}/api/v1/schemas`, { schema, registry });
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function getSchema(id) {
+    try {
+        const response = await axios.get(`${URL}/api/v1/schemas/${id}`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function setSchema(id, schema) {
+    try {
+        const response = await axios.put(`${URL}/api/v1/schemas/${id}`, { schema });
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function testSchema(id) {
+    try {
+        const response = await axios.post(`${URL}/api/v1/schemas/${id}/test`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function testAgent(id) {
+    try {
+        const response = await axios.post(`${URL}/api/v1/agents/${id}/test`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function bindCredential(schema, subject) {
+    try {
+        const response = await axios.post(`${URL}/api/v1/credentials/bind`, { schema, subject });
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function issueCredential(credential, registry) {
+    try {
+        const response = await axios.post(`${URL}/api/v1/credentials/issue`, { credential, registry });
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function listCredentials() {
+    try {
+        const response = await axios.get(`${URL}/api/v1/credentials`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function acceptCredential(did) {
+    try {
+        const response = await axios.post(`${URL}/api/v1/credentials`, { did });
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function getCredential(did) {
+    try {
+        const response = await axios.get(`${URL}/api/v1/credentials/${did}`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function removeCredential(did) {
+    try {
+        const response = await axios.delete(`${URL}/api/v1/credentials/${did}`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function publishCredential(did, reveal) {
+    try {
+        const response = await axios.post(`${URL}/api/v1/credentials/${did}/publish`, { reveal });
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function unpublishCredential(did) {
+    try {
+        const response = await axios.post(`${URL}/api/v1/credentials/${did}/unpublish`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function listIssued() {
+    try {
+        const response = await axios.get(`${URL}/api/v1/issued`);
+        return response.data;
+    }
+    catch (error) {
+        throwError(error);
+    }
+}
+
+export async function revokeCredential(did) {
+    try {
+        const response = await axios.delete(`${URL}/api/v1/issued/${did}`);
         return response.data;
     }
     catch (error) {
