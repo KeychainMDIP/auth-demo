@@ -150,7 +150,7 @@ export async function getCurrentId() {
 
 export async function setCurrentId(name) {
     try {
-        const response = await axios.put(`${URL}/api/v1/ids/current`, { name: name });
+        const response = await axios.put(`${URL}/api/v1/ids/current`, { name });
         return response.data;
     }
     catch (error) {
@@ -180,7 +180,7 @@ export async function resolveId(id) {
 
 export async function createId(name, registry) {
     try {
-        const response = await axios.post(`${URL}/api/v1/ids/new`, { name: name, registry: registry });
+        const response = await axios.post(`${URL}/api/v1/ids/new`, { name, registry });
         return response.data;
     }
     catch (error) {
@@ -210,7 +210,7 @@ export async function backupId(id) {
 
 export async function recoverId(did) {
     try {
-        const response = await axios.post(`${URL}/api/v1/ids/recover`, { did: did });
+        const response = await axios.post(`${URL}/api/v1/ids/recover`, { did });
         return response.data;
     }
     catch (error) {
@@ -230,7 +230,7 @@ export async function listNames() {
 
 export async function addName(name, did) {
     try {
-        const response = await axios.post(`${URL}/api/v1/names`, { name: name, did: did });
+        const response = await axios.post(`${URL}/api/v1/names`, { name, did });
         return response.data;
     }
     catch (error) {
