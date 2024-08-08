@@ -11,6 +11,7 @@ const app = express();
 const port = 3000;
 const domain = 'localhost';
 const dbName = 'data/db.json';
+const logins = {};
 
 const roles = {
     owner: 'auth-demo-owner',
@@ -242,6 +243,7 @@ app.get('/api/version', async (req, res) => {
 app.get('/api/challenge', async (req, res) => {
     try {
         const challenge = await keymaster.createChallenge();
+        req.session.challenge = challenge;
         res.json(challenge);
     } catch (error) {
         console.log(error);
@@ -298,6 +300,56 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+app.get('/api/verify', async (req, res) => {
+    try {
+        const { response, challenge } = req.query;
+
+        const verify = await keymaster.verifyResponse(response, challenge);
+
+        if (verify.match) {
+            const docs = await keymaster.resolveDID(response);
+            const did = docs.didDocument.controller;
+            logins[challenge] = {
+                response,
+                challenge,
+                did,
+                docs,
+                verify,
+            };
+
+            const db = loadDb();
+
+            if (!db.users) {
+                db.users = {};
+            }
+
+            const now = new Date().toISOString();
+
+            if (Object.keys(db.users).includes(did)) {
+                db.users[did].lastLogin = now;
+                db.users[did].logins += 1;
+            }
+            else {
+                const role = await getRole(did) || await addMember(did);
+
+                db.users[did] = {
+                    firstLogin: now,
+                    lastLogin: now,
+                    logins: 1,
+                    role: role,
+                }
+            }
+
+            writeDb(db);
+        }
+
+        res.json({ authenticated: verify.match });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send(error.toString());
+    }
+});
+
 app.post('/api/logout', async (req, res) => {
     try {
         req.session.destroy();
@@ -311,6 +363,10 @@ app.post('/api/logout', async (req, res) => {
 
 app.get('/api/check-auth', async (req, res) => {
     try {
+        if (!req.session.user && req.session.challenge) {
+            req.session.user = logins[req.session.challenge];
+        }
+
         const isAuthenticated = req.session.user ? true : false;
         const userDID = isAuthenticated ? req.session.user.did : null;
         const db = loadDb();

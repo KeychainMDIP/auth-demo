@@ -165,6 +165,18 @@ function ViewLogin() {
     useEffect(() => {
         const init = async () => {
             try {
+                const intervalId = setInterval(async () => {
+                    try {
+                        const response = await axios.get('/api/check-auth');
+                        if (response.data.isAuthenticated) {
+                            clearInterval(intervalId);
+                            navigate('/');
+                        }
+                    } catch (error) {
+                        console.error('Failed to check authentication:', error);
+                    }
+                }, 3000); // Check every 3 seconds
+
                 const response = await axios.get(`/api/challenge`);
                 const challengeDID = response.data;
                 setChallengeDID(challengeDID);
@@ -174,6 +186,9 @@ function ViewLogin() {
                     callbackUrl: `${window.location.origin}/api/verify`
                 });
                 setQrData(qrData);
+
+                // Clear the interval when the component is unmounted
+                return () => clearInterval(intervalId);
             }
             catch (error) {
                 window.alert(error);
