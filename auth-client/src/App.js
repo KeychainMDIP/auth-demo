@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
     useNavigate,
     useParams,
+    useLocation,
     BrowserRouter as Router,
     Link,
     Routes,
@@ -11,6 +12,7 @@ import { Box, Button, Grid, Select, MenuItem, TextField, Typography } from '@mui
 import { Table, TableBody, TableRow, TableCell } from '@mui/material';
 import axios from 'axios';
 import { format, differenceInDays } from 'date-fns';
+import { QRCodeSVG } from 'qrcode.react';
 
 import './App.css';
 
@@ -156,13 +158,22 @@ function ViewLogin() {
     const [challengeDID, setChallengeDID] = useState('');
     const [responseDID, setResponseDID] = useState('');
     const [loggingIn, setLoggingIn] = useState(false);
+    const [qrData, setQrData] = useState(null);
+
     const navigate = useNavigate();
 
     useEffect(() => {
         const init = async () => {
             try {
                 const response = await axios.get(`/api/challenge`);
-                setChallengeDID(response.data);
+                const challengeDID = response.data;
+                setChallengeDID(challengeDID);
+
+                const qrData = JSON.stringify({
+                    challenge: challengeDID,
+                    callbackUrl: `${window.location.origin}/api/verify`
+                });
+                setQrData(qrData);
             }
             catch (error) {
                 window.alert(error);
@@ -213,6 +224,12 @@ function ViewLogin() {
                             <Typography style={{ fontFamily: 'Courier' }}>
                                 {challengeDID}
                             </Typography>
+                            {qrData &&
+                                <QRCodeSVG value={qrData} />
+                            }
+                            {qrData &&
+                                <pre>{qrData}</pre>
+                            }
                         </TableCell>
                         <TableCell>
                             <Button variant="contained" color="primary" onClick={() => copyToClipboard(challengeDID)}>
