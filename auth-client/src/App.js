@@ -179,12 +179,12 @@ function ViewLogin() {
                 }, 3000); // Check every 3 seconds
 
                 const response = await axios.get(`/api/challenge`);
-                const challengeDID = response.data;
+                const challengeDID = response.data.challenge;
                 setChallengeDID(challengeDID);
 
                 const qrData = JSON.stringify({
                     challenge: challengeDID,
-                    callbackUrl: `${window.location.origin}/api/verify`
+                    callbackUrl: `${window.location.origin}/api/login`
                 });
                 setQrData(qrData);
             }

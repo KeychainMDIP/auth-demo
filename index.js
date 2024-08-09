@@ -231,6 +231,50 @@ function isAdmin(req, res, next) {
     });
 }
 
+async function loginUser(response, challenge) {
+    const verify = await keymaster.verifyResponse(response, challenge);
+
+    if (verify.match) {
+        const docs = await keymaster.resolveDID(response);
+        const did = docs.didDocument.controller;
+
+        logins[challenge] = {
+            response,
+            challenge,
+            did,
+            docs,
+            verify,
+        };
+
+        const db = loadDb();
+
+        if (!db.users) {
+            db.users = {};
+        }
+
+        const now = new Date().toISOString();
+
+        if (Object.keys(db.users).includes(did)) {
+            db.users[did].lastLogin = now;
+            db.users[did].logins += 1;
+        }
+        else {
+            const role = await getRole(did) || await addMember(did);
+
+            db.users[did] = {
+                firstLogin: now,
+                lastLogin: now,
+                logins: 1,
+                role: role,
+            }
+        }
+
+        writeDb(db);
+    }
+
+    return verify.match;
+}
+
 app.get('/api/version', async (req, res) => {
     try {
         res.json(1);
@@ -244,7 +288,7 @@ app.get('/api/challenge', async (req, res) => {
     try {
         const challenge = await keymaster.createChallenge();
         req.session.challenge = challenge;
-        res.json(challenge);
+        res.json({challenge});
     } catch (error) {
         console.log(error);
         res.status(500).send(error.toString());
@@ -254,96 +298,23 @@ app.get('/api/challenge', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     try {
         const { response, challenge } = req.body;
-        const verify = await keymaster.verifyResponse(response, challenge);
+        const success = await loginUser(response, challenge);
+        req.session.user = logins[challenge];
 
-        if (verify.match) {
-            const docs = await keymaster.resolveDID(response);
-            const did = docs.didDocument.controller;
-            req.session.user = {
-                response,
-                challenge,
-                did,
-                docs,
-                verify,
-            };
-
-            const db = loadDb();
-
-            if (!db.users) {
-                db.users = {};
-            }
-
-            const now = new Date().toISOString();
-
-            if (Object.keys(db.users).includes(did)) {
-                db.users[did].lastLogin = now;
-                db.users[did].logins += 1;
-            }
-            else {
-                const role = await getRole(did) || await addMember(did);
-
-                db.users[did] = {
-                    firstLogin: now,
-                    lastLogin: now,
-                    logins: 1,
-                    role: role,
-                }
-            }
-
-            writeDb(db);
-        }
-
-        res.json({ authenticated: verify.match });
+        res.json({ authenticated: success });
     } catch (error) {
         console.log(error);
         res.status(500).send(error.toString());
     }
 });
 
-app.get('/api/verify', async (req, res) => {
+app.get('/api/login', async (req, res) => {
     try {
         const { response, challenge } = req.query;
+        const success = await loginUser(response, challenge);
+        req.session.user = logins[challenge];
 
-        const verify = await keymaster.verifyResponse(response, challenge);
-
-        if (verify.match) {
-            const docs = await keymaster.resolveDID(response);
-            const did = docs.didDocument.controller;
-            logins[challenge] = {
-                response,
-                challenge,
-                did,
-                docs,
-                verify,
-            };
-
-            const db = loadDb();
-
-            if (!db.users) {
-                db.users = {};
-            }
-
-            const now = new Date().toISOString();
-
-            if (Object.keys(db.users).includes(did)) {
-                db.users[did].lastLogin = now;
-                db.users[did].logins += 1;
-            }
-            else {
-                const role = await getRole(did) || await addMember(did);
-
-                db.users[did] = {
-                    firstLogin: now,
-                    lastLogin: now,
-                    logins: 1,
-                    role: role,
-                }
-            }
-
-            writeDb(db);
-        }
-
-        res.json({ authenticated: verify.match });
+        res.json({ authenticated: success });
     } catch (error) {
         console.log(error);
         res.status(500).send(error.toString());
