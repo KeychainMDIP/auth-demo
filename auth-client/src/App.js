@@ -161,11 +161,12 @@ function ViewLogin() {
     const [qrData, setQrData] = useState(null);
 
     const navigate = useNavigate();
+    let intervalId;
 
     useEffect(() => {
         const init = async () => {
             try {
-                const intervalId = setInterval(async () => {
+                intervalId = setInterval(async () => {
                     try {
                         const response = await axios.get('/api/check-auth');
                         if (response.data.isAuthenticated) {
@@ -186,9 +187,6 @@ function ViewLogin() {
                     callbackUrl: `${window.location.origin}/api/verify`
                 });
                 setQrData(qrData);
-
-                // Clear the interval when the component is unmounted
-                return () => clearInterval(intervalId);
             }
             catch (error) {
                 window.alert(error);
@@ -196,6 +194,8 @@ function ViewLogin() {
         };
 
         init();
+        // Clear the interval when the component is unmounted
+        return () => clearInterval(intervalId);
     }, []);
 
     async function login() {
