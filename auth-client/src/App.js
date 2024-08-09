@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
     useNavigate,
     useParams,
-    useLocation,
     BrowserRouter as Router,
     Link,
     Routes,
@@ -159,6 +158,7 @@ function ViewLogin() {
     const [responseDID, setResponseDID] = useState('');
     const [loggingIn, setLoggingIn] = useState(false);
     const [qrData, setQrData] = useState(null);
+    const [challengeCopied, setChallengeCopied] = useState(false);
 
     const navigate = useNavigate();
     let intervalId;
@@ -221,7 +221,7 @@ function ViewLogin() {
     async function copyToClipboard(text) {
         try {
             await navigator.clipboard.writeText(text);
-            window.alert(`"${text}" copied to clipboard`);
+            setChallengeCopied(true);
         }
         catch (error) {
             window.alert('Failed to copy text: ', error);
@@ -242,12 +242,9 @@ function ViewLogin() {
                             {qrData &&
                                 <QRCodeSVG value={qrData} />
                             }
-                            {qrData &&
-                                <pre>{qrData}</pre>
-                            }
                         </TableCell>
                         <TableCell>
-                            <Button variant="contained" color="primary" onClick={() => copyToClipboard(challengeDID)}>
+                            <Button variant="contained" color="primary" onClick={() => copyToClipboard(challengeDID)} disabled={challengeCopied}>
                                 Copy
                             </Button>
                         </TableCell>
