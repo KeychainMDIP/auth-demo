@@ -182,11 +182,14 @@ function ViewLogin() {
                 const challengeDID = response.data.challenge;
                 setChallengeDID(challengeDID);
 
-                const qrData = JSON.stringify({
-                    challenge: challengeDID,
-                    callbackUrl: `${window.location.origin}/api/login`
-                });
-                setQrData(qrData);
+		//    const qrData = JSON.stringify({
+		//    challenge: challengeDID,
+		//    callbackUrl: `${window.location.origin}/api/login`
+		//});
+		const qrData = "https://wallet.mdip.yourself.dev?challenge=" + challengeDID + 
+			                                       "&callback=" + `${window.location.origin}/api/login` +
+			                                       "&widget=1";
+		setQrData(encodeURI(qrData));
             }
             catch (error) {
                 window.alert(error);
@@ -236,12 +239,12 @@ function ViewLogin() {
                     <TableRow>
                         <TableCell>Challenge:</TableCell>
                         <TableCell>
-                            <Typography style={{ fontFamily: 'Courier' }}>
-                                {challengeDID}
-                            </Typography>
                             {qrData &&
                                 <QRCodeSVG value={qrData} />
                             }
+                            <Typography style={{ fontFamily: 'Courier' }}>
+                                {challengeDID}
+                            </Typography>
                         </TableCell>
                         <TableCell>
                             <Button variant="contained" color="primary" onClick={() => copyToClipboard(challengeDID)} disabled={challengeCopied}>
