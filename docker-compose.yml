@@ -5,6 +5,14 @@ services:
       dockerfile: Dockerfile
     image: keychainmdip/auth-demo
     network_mode: host
+    environment:
+      - AD_HOST_DOMAIN=${AD_HOST_DOMAIN}
+      - AD_HOST_PORT=${AD_HOST_PORT}
+      - AD_HOST_URL=${AD_HOST_URL}
+      - AD_KEYMASTER_URL=${AD_KEYMASTER_URL}
+      - AD_WALLET_URL=${AD_WALLET_URL}
+      - AD_KEY_FILE=${AD_KEY_FILE}
+      - AD_CERT_FILE=${AD_CERT_FILE}
     volumes:
       - ./data:/app/data
     ports:

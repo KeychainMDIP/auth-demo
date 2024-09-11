@@ -6,10 +6,11 @@ import fs from 'fs';
 import https from 'https';
 import { fileURLToPath } from 'url';
 import * as keymaster from './keymaster-sdk.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
-const port = 3000;
-const domain = 'localhost';
 const dbName = 'data/db.json';
 const logins = {};
 
@@ -288,7 +289,8 @@ app.get('/api/challenge', async (req, res) => {
     try {
         const challenge = await keymaster.createChallenge();
         req.session.challenge = challenge;
-        res.json({challenge});
+        const challengeURL = `${process.env.AD_WALLET_URL}?challenge=${challenge}&callback=${process.env.AD_HOST_URL}/api/login&widget=1`;
+        res.json({challenge, challengeURL});
     } catch (error) {
         console.log(error);
         res.status(500).send(error.toString());
@@ -528,14 +530,18 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Read the certificate and key
 const options = {
-    key: fs.readFileSync(`${domain}-key.pem`),
-    cert: fs.readFileSync(`${domain}.pem`)
+    key: fs.readFileSync(`${process.env.AD_KEY_FILE}`),
+    cert: fs.readFileSync(`${process.env.AD_CERT_FILE}`)
 };
 
-https.createServer(options, app).listen(port, async () => {
-    keymaster.setURL('http://localhost:4226');
+https.createServer(options, app).listen(process.env.AD_HOST_PORT, async () => {
+    keymaster.setURL(process.env.AD_KEYMASTER_URL);
     await keymaster.waitUntilReady();
     await verifyRoles();
     await verifyDb();
-    console.log(`auth-demo listening at https://${domain}:${port}`);
+    console.log(`auth-demo listening at ${process.env.AD_HOST_URL}`);
+    console.log(`auth-demo using keymaster at ${process.env.AD_KEYMASTER_URL}`);
+    console.log(`auth-demo using wallet at ${process.env.AD_WALLET_URL}`);
+    console.log(`auth-demo using key file ${process.env.AD_KEY_FILE}`);
+    console.log(`auth-demo using cert file ${process.env.AD_CERT_FILE}`);
 });

@@ -179,17 +179,9 @@ function ViewLogin() {
                 }, 3000); // Check every 3 seconds
 
                 const response = await axios.get(`/api/challenge`);
-                const challengeDID = response.data.challenge;
-                setChallengeDID(challengeDID);
-
-		//    const qrData = JSON.stringify({
-		//    challenge: challengeDID,
-		//    callbackUrl: `${window.location.origin}/api/login`
-		//});
-		const qrData = "https://wallet.mdip.yourself.dev?challenge=" + challengeDID + 
-			                                       "&callback=" + `${window.location.origin}/api/login` +
-			                                       "&widget=1";
-		setQrData(encodeURI(qrData));
+                const { challenge, challengeURL } = response.data;
+                setChallengeDID(challenge);
+                setQrData(encodeURI(challengeURL));
             }
             catch (error) {
                 window.alert(error);
