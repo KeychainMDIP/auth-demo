@@ -287,9 +287,15 @@ app.get('/api/version', async (req, res) => {
 
 app.get('/api/challenge', async (req, res) => {
     try {
-        const challenge = await keymaster.createChallenge();
+        const challenge = await keymaster.createChallenge({
+            credentials: [],
+            callback: `${process.env.AD_HOST_URL}/api/login`
+        });
         req.session.challenge = challenge;
-        const challengeURL = `${process.env.AD_WALLET_URL}?challenge=${challenge}&callback=${process.env.AD_HOST_URL}/api/login&widget=1`;
+        const challengeURL = `${process.env.AD_WALLET_URL}?challenge=${challenge}`;
+
+        const doc = await keymaster.resolveDID(challenge);
+        console.log(JSON.stringify(doc, null, 4));
         res.json({challenge, challengeURL});
     } catch (error) {
         console.log(error);
