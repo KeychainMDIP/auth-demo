@@ -278,9 +278,9 @@ export async function createResponse(challengeDID) {
     }
 }
 
-export async function verifyResponse(responseDID, challengeDID) {
+export async function verifyResponse(responseDID) {
     try {
-        const response = await axios.post(`${URL}/api/v1/response/verify`, { response: responseDID, challenge: challengeDID });
+        const response = await axios.post(`${URL}/api/v1/response/verify`, { response: responseDID });
         return response.data;
     }
     catch (error) {

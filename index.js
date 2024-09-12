@@ -232,18 +232,17 @@ function isAdmin(req, res, next) {
     });
 }
 
-async function loginUser(response, challenge) {
-    const verify = await keymaster.verifyResponse(response, challenge);
+async function loginUser(response) {
+    const verify = await keymaster.verifyResponse(response);
 
     if (verify.match) {
-        const docs = await keymaster.resolveDID(response);
-        const did = docs.didDocument.controller;
+        const challenge = verify.challenge;
+        const did = verify.responder;
 
         logins[challenge] = {
             response,
             challenge,
             did,
-            docs,
             verify,
         };
 
@@ -305,8 +304,8 @@ app.get('/api/challenge', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
     try {
-        const { response, challenge } = req.body;
-        const success = await loginUser(response, challenge);
+        const { response } = req.body;
+        const success = await loginUser(response);
         req.session.user = logins[challenge];
 
         res.json({ authenticated: success });
