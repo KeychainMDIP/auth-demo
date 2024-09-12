@@ -7,6 +7,7 @@ import https from 'https';
 import { fileURLToPath } from 'url';
 import * as keymaster from './keymaster-sdk.js';
 import dotenv from 'dotenv';
+import cors from 'cors';
 
 dotenv.config();
 
@@ -272,7 +273,7 @@ async function loginUser(response) {
         writeDb(db);
     }
 
-    return verify.match;
+    return verify;
 }
 
 app.get('/api/version', async (req, res) => {
@@ -302,26 +303,35 @@ app.get('/api/challenge', async (req, res) => {
     }
 });
 
-app.post('/api/login', async (req, res) => {
-    try {
-        const { response } = req.body;
-        const success = await loginUser(response);
-        req.session.user = logins[challenge];
+const corsOptions = {
+    origin: '*',               // Allow all origins (any wallet) to login
+    methods: ['GET', 'POST'],  // Specify which methods are allowed (e.g., GET, POST)
+    credentials: true,         // Enable if you need to send cookies or authorization headers
+    optionsSuccessStatus: 200  // Some legacy browsers choke on 204
+};
 
-        res.json({ authenticated: success });
+app.options('/api/login', cors(corsOptions)); // Handle preflight requests for this route
+
+app.get('/api/login', cors(corsOptions), async (req, res) => {
+    try {
+        const { response } = req.query;
+        const verify = await loginUser(response);
+        req.session.user = logins[verify.challenge];
+
+        res.json({ authenticated: verify.match });
     } catch (error) {
         console.log(error);
         res.status(500).send(error.toString());
     }
 });
 
-app.get('/api/login', async (req, res) => {
+app.post('/api/login', cors(corsOptions), async (req, res) => {
     try {
-        const { response, challenge } = req.query;
-        const success = await loginUser(response, challenge);
-        req.session.user = logins[challenge];
+        const { response } = req.body;
+        const verify = await loginUser(response);
+        req.session.user = logins[verify.challenge];
 
-        res.json({ authenticated: success });
+        res.json({ authenticated: verify.match });
     } catch (error) {
         console.log(error);
         res.status(500).send(error.toString());
