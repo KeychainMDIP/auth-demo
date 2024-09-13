@@ -102,7 +102,7 @@ function Home() {
     return (
         <div className="App">
             <Header title="Home" />
-            <Grid container style={{ width: '800px' }}>
+            <Grid container style={{ width: '400px' }}>
                 <Grid item xs={true}>
                     <h2>MDIP auth demo</h2>
                 </Grid>
