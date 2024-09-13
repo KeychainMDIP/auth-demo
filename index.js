@@ -288,15 +288,16 @@ app.get('/api/version', async (req, res) => {
 app.get('/api/challenge', async (req, res) => {
     try {
         const challenge = await keymaster.createChallenge({
-            credentials: [],
-            callback: `${process.env.AD_HOST_URL}/api/login`
+            challenge: {
+                callback: `${process.env.AD_HOST_URL}/api/login`
+            }
         });
         req.session.challenge = challenge;
         const challengeURL = `${process.env.AD_WALLET_URL}?challenge=${challenge}`;
 
         const doc = await keymaster.resolveDID(challenge);
         console.log(JSON.stringify(doc, null, 4));
-        res.json({challenge, challengeURL});
+        res.json({ challenge, challengeURL });
     } catch (error) {
         console.log(error);
         res.status(500).send(error.toString());
@@ -554,9 +555,9 @@ https.createServer(options, app).listen(process.env.AD_HOST_PORT, async () => {
     await keymaster.waitUntilReady();
     await verifyRoles();
     await verifyDb();
-    console.log(`auth-demo listening at ${process.env.AD_HOST_URL}`);
     console.log(`auth-demo using keymaster at ${process.env.AD_KEYMASTER_URL}`);
     console.log(`auth-demo using wallet at ${process.env.AD_WALLET_URL}`);
     console.log(`auth-demo using key file ${process.env.AD_KEY_FILE}`);
     console.log(`auth-demo using cert file ${process.env.AD_CERT_FILE}`);
+    console.log(`auth-demo listening at ${process.env.AD_HOST_URL}`);
 });
