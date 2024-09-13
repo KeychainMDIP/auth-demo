@@ -102,7 +102,7 @@ function Home() {
     return (
         <div className="App">
             <Header title="Home" />
-            <Grid container style={{ width: '800px' }}>
+            <Grid container style={{ width: '400px' }}>
                 <Grid item xs={true}>
                     <h2>MDIP auth demo</h2>
                 </Grid>
@@ -157,7 +157,7 @@ function ViewLogin() {
     const [challengeDID, setChallengeDID] = useState('');
     const [responseDID, setResponseDID] = useState('');
     const [loggingIn, setLoggingIn] = useState(false);
-    const [qrData, setQrData] = useState(null);
+    const [challengeURL, setChallengeURL] = useState(null);
     const [challengeCopied, setChallengeCopied] = useState(false);
 
     const navigate = useNavigate();
@@ -176,17 +176,12 @@ function ViewLogin() {
                     } catch (error) {
                         console.error('Failed to check authentication:', error);
                     }
-                }, 3000); // Check every 3 seconds
+                }, 1000); // Check every second
 
                 const response = await axios.get(`/api/challenge`);
-                const challengeDID = response.data.challenge;
-                setChallengeDID(challengeDID);
-
-                const qrData = JSON.stringify({
-                    challenge: challengeDID,
-                    callbackUrl: `${window.location.origin}/api/login`
-                });
-                setQrData(qrData);
+                const { challenge, challengeURL } = response.data;
+                setChallengeDID(challenge);
+                setChallengeURL(encodeURI(challengeURL));
             }
             catch (error) {
                 window.alert(error);
@@ -236,12 +231,14 @@ function ViewLogin() {
                     <TableRow>
                         <TableCell>Challenge:</TableCell>
                         <TableCell>
+                            {challengeURL &&
+                                <a href={challengeURL} target="_blank" rel="noopener noreferrer">
+                                    <QRCodeSVG value={challengeURL} />
+                                </a>
+                            }
                             <Typography style={{ fontFamily: 'Courier' }}>
                                 {challengeDID}
                             </Typography>
-                            {qrData &&
-                                <QRCodeSVG value={qrData} />
-                            }
                         </TableCell>
                         <TableCell>
                             <Button variant="contained" color="primary" onClick={() => copyToClipboard(challengeDID)} disabled={challengeCopied}>
