@@ -8,10 +8,10 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
-import * as gatekeeper from './gatekeeper-sdk.js';
-import * as db_wallet from './db-wallet-json.js';
-import * as keymaster_lib from './keymaster-lib.js';
-import * as keymaster_sdk from './keymaster-sdk.js';
+import * as gatekeeper from '@mdip/gatekeeper-sdk';
+import * as keymaster_sdk from '@mdip/keymaster-sdk';
+import * as keymaster_lib from '@mdip/keymaster-lib';
+import * as db_wallet from '@mdip/db-wallet-json';
 
 let keymaster;
 

@@ -13,6 +13,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@mdip/gatekeeper-sdk": "file:../kc/packages/gatekeeper-sdk",
+    "@mdip/keymaster-lib": "file:../kc/packages/keymaster-lib",
+    "@mdip/keymaster-sdk": "file:../kc/packages/keymaster-sdk",
+    "@mdip/db-wallet-json": "file:../kc/packages/db-wallet-json",
     "@noble/ciphers": "^0.4.1",
     "@noble/hashes": "^1.3.3",
     "@noble/secp256k1": "^2.0.0",
