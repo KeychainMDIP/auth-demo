@@ -5,11 +5,17 @@ import path from 'path';
 import fs from 'fs';
 import https from 'https';
 import { fileURLToPath } from 'url';
-import * as keymaster from './keymaster-sdk.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
+import * as gatekeeper from './gatekeeper-sdk.js';
+import * as keymaster_lib from './keymaster-lib.js';
+import * as keymaster_sdk from './keymaster-sdk.js';
+import * as db_wallet from './db-wallet-json.js';
+
 dotenv.config();
+
+const keymaster = keymaster_lib;
 
 const app = express();
 const dbName = 'data/db.json';
@@ -99,7 +105,9 @@ async function verifyRoles() {
         await keymaster.groupAdd(roles.member, roles.moderator);
     }
 
-    await keymaster.setCurrentId(currentId);
+    if (currentId) {
+        await keymaster.setCurrentId(currentId);
+    }
 }
 
 async function getRole(user) {
@@ -551,8 +559,15 @@ const options = {
 };
 
 https.createServer(options, app).listen(process.env.AD_HOST_PORT, async () => {
-    keymaster.setURL(process.env.AD_KEYMASTER_URL);
-    await keymaster.waitUntilReady();
+
+    gatekeeper.setURL(process.env.AD_GATEKEEPER_URL);
+
+    await gatekeeper.waitUntilReady();
+    await keymaster.start(gatekeeper, db_wallet);
+
+    //keymaster.setURL(process.env.AD_KEYMASTER_URL);
+    //await keymaster.waitUntilReady();
+
     await verifyRoles();
     await verifyDb();
     console.log(`auth-demo using keymaster at ${process.env.AD_KEYMASTER_URL}`);
