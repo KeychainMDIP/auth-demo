@@ -9,13 +9,13 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 
 import * as gatekeeper from './gatekeeper-sdk.js';
+import * as db_wallet from './db-wallet-json.js';
 import * as keymaster_lib from './keymaster-lib.js';
 import * as keymaster_sdk from './keymaster-sdk.js';
-import * as db_wallet from './db-wallet-json.js';
+
+let keymaster;
 
 dotenv.config();
-
-const keymaster = keymaster_lib;
 
 const app = express();
 const dbName = 'data/db.json';
@@ -560,13 +560,17 @@ const options = {
 
 https.createServer(options, app).listen(process.env.AD_HOST_PORT, async () => {
 
-    gatekeeper.setURL(process.env.AD_GATEKEEPER_URL);
-
-    await gatekeeper.waitUntilReady();
-    await keymaster.start(gatekeeper, db_wallet);
-
-    //keymaster.setURL(process.env.AD_KEYMASTER_URL);
-    //await keymaster.waitUntilReady();
+    if (process.env.AD_KEYMASTER_URL) {
+        keymaster = keymaster_sdk;
+        keymaster.setURL(process.env.AD_KEYMASTER_URL);
+        await keymaster.waitUntilReady();
+    }
+    else {
+        keymaster = keymaster_lib;
+        gatekeeper.setURL(process.env.AD_GATEKEEPER_URL);
+        await gatekeeper.waitUntilReady();
+        await keymaster.start(gatekeeper, db_wallet);
+    }
 
     await verifyRoles();
     await verifyDb();

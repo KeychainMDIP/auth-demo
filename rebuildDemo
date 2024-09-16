@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+
+npm --prefix auth-client run build
+node index.js
