@@ -9,8 +9,8 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 
 import * as gatekeeper from '@macterra/gatekeeper-sdk';
-import * as keymaster_sdk from '@macterra/keymaster-sdk';
-import * as keymaster_lib from '@macterra/keymaster-lib';
+import * as keymaster_sdk from '@macterra/keymaster/sdk';
+import * as keymaster_lib from '@macterra/keymaster/lib';
 import * as db_wallet from '@macterra/db-wallet-json';
 
 let keymaster;

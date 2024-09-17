@@ -15,8 +15,7 @@
   "dependencies": {
     "@macterra/db-wallet-json": "^1.0.0",
     "@macterra/gatekeeper-sdk": "^1.0.0",
-    "@macterra/keymaster-lib": "^1.0.1",
-    "@macterra/keymaster-sdk": "^1.0.0",
+    "@macterra/keymaster": "^1.0.3",
     "axios": "^1.6.8",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
