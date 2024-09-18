@@ -8,10 +8,10 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
-import * as gatekeeper from '@macterra/gatekeeper-sdk';
+import * as gatekeeper_sdk from '@macterra/gatekeeper/sdk';
 import * as keymaster_sdk from '@macterra/keymaster/sdk';
 import * as keymaster_lib from '@macterra/keymaster/lib';
-import * as db_wallet from '@macterra/db-wallet-json';
+import * as db_wallet from '@macterra/keymaster/wallet/json';
 
 let keymaster;
 
@@ -567,9 +567,9 @@ https.createServer(options, app).listen(process.env.AD_HOST_PORT, async () => {
     }
     else {
         keymaster = keymaster_lib;
-        gatekeeper.setURL(process.env.AD_GATEKEEPER_URL);
-        await gatekeeper.waitUntilReady();
-        await keymaster.start(gatekeeper, db_wallet);
+        gatekeeper_sdk.setURL(process.env.AD_GATEKEEPER_URL);
+        await gatekeeper_sdk.waitUntilReady();
+        await keymaster.start(gatekeeper_sdk, db_wallet);
     }
 
     await verifyRoles();
