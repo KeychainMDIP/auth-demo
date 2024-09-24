@@ -5,7 +5,7 @@ FROM node:18.15.0
 WORKDIR /app
 
 # Copy package.json and package-lock.json to the working directory
-COPY package*.json ./
+COPY package*.json .
 
 # Install dependencies
 RUN npm ci
@@ -19,8 +19,8 @@ COPY auth-client/src ./auth-client/src/
 RUN cd auth-client && npm run build
 
 # Copy app
-COPY *.js ./
-COPY *.pem ./
+COPY *.js .
+COPY *.pem .
 
 # Run...
 CMD ["node", "index.js"]

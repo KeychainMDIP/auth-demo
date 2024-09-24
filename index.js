@@ -5,9 +5,16 @@ import path from 'path';
 import fs from 'fs';
 import https from 'https';
 import { fileURLToPath } from 'url';
-import * as keymaster from './keymaster-sdk.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
+
+import * as cipher from '@mdip/cipher/node';
+import * as gatekeeper_sdk from '@mdip/gatekeeper/sdk';
+import * as keymaster_sdk from '@mdip/keymaster/sdk';
+import * as keymaster_lib from '@mdip/keymaster/lib';
+import * as db_wallet from '@mdip/keymaster/db/json';
+
+let keymaster;
 
 dotenv.config();
 
@@ -99,7 +106,9 @@ async function verifyRoles() {
         await keymaster.groupAdd(roles.member, roles.moderator);
     }
 
-    await keymaster.setCurrentId(currentId);
+    if (currentId) {
+        await keymaster.setCurrentId(currentId);
+    }
 }
 
 async function getRole(user) {
@@ -551,8 +560,19 @@ const options = {
 };
 
 https.createServer(options, app).listen(process.env.AD_HOST_PORT, async () => {
-    keymaster.setURL(process.env.AD_KEYMASTER_URL);
-    await keymaster.waitUntilReady();
+
+    if (process.env.AD_KEYMASTER_URL) {
+        keymaster = keymaster_sdk;
+        keymaster.setURL(process.env.AD_KEYMASTER_URL);
+        await keymaster.waitUntilReady();
+    }
+    else {
+        keymaster = keymaster_lib;
+        gatekeeper_sdk.setURL(process.env.AD_GATEKEEPER_URL);
+        await gatekeeper_sdk.waitUntilReady();
+        await keymaster.start(gatekeeper_sdk, db_wallet, cipher);
+    }
+
     await verifyRoles();
     await verifyDb();
     console.log(`auth-demo using keymaster at ${process.env.AD_KEYMASTER_URL}`);
