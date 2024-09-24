@@ -13,8 +13,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@macterra/gatekeeper": "^1.0.1",
-    "@macterra/keymaster": "^1.0.4",
+    "@mdip/cipher": "^0.1.0",
+    "@mdip/gatekeeper": "^0.1.0",
+    "@mdip/keymaster": "^0.1.0",
     "axios": "^1.6.8",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
