@@ -243,7 +243,7 @@ function isAdmin(req, res, next) {
 }
 
 async function loginUser(response) {
-    const verify = await keymaster.verifyResponse(response);
+    const verify = await keymaster.verifyResponse(response, 10);
 
     if (verify.match) {
         const challenge = verify.challenge;
