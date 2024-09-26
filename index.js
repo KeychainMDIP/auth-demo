@@ -248,14 +248,6 @@ async function loginUser(response) {
     if (verify.match) {
         const challenge = verify.challenge;
         const did = verify.responder;
-
-        logins[challenge] = {
-            response,
-            challenge,
-            did,
-            verify,
-        };
-
         const db = loadDb();
 
         if (!db.users) {
@@ -280,6 +272,13 @@ async function loginUser(response) {
         }
 
         writeDb(db);
+
+        logins[challenge] = {
+            response,
+            challenge,
+            did,
+            verify,
+        };
     }
 
     return verify;
