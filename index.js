@@ -243,19 +243,11 @@ function isAdmin(req, res, next) {
 }
 
 async function loginUser(response) {
-    const verify = await keymaster.verifyResponse(response);
+    const verify = await keymaster.verifyResponse(response, { retries: 10 });
 
     if (verify.match) {
         const challenge = verify.challenge;
         const did = verify.responder;
-
-        logins[challenge] = {
-            response,
-            challenge,
-            did,
-            verify,
-        };
-
         const db = loadDb();
 
         if (!db.users) {
@@ -280,6 +272,13 @@ async function loginUser(response) {
         }
 
         writeDb(db);
+
+        logins[challenge] = {
+            response,
+            challenge,
+            did,
+            verify,
+        };
     }
 
     return verify;
