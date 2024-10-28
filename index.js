@@ -81,7 +81,7 @@ async function verifyRoles() {
         console.log(`Creating group ${roles.admin}`);
         const did = await keymaster.createGroup(roles.admin);
         await keymaster.addName(roles.admin, did);
-        await keymaster.groupAdd(roles.admin, roles.owner);
+        await keymaster.addGroupMember(roles.admin, roles.owner);
     }
 
     try {
@@ -92,7 +92,7 @@ async function verifyRoles() {
         console.log(`Creating group ${roles.moderator}`);
         const did = await keymaster.createGroup(roles.moderator);
         await keymaster.addName(roles.moderator, did);
-        await keymaster.groupAdd(roles.moderator, roles.admin);
+        await keymaster.addGroupMember(roles.moderator, roles.admin);
     }
 
     try {
@@ -103,7 +103,7 @@ async function verifyRoles() {
         console.log(`Creating group ${roles.member}`);
         const did = await keymaster.createGroup(roles.member);
         await keymaster.addName(roles.member, did);
-        await keymaster.groupAdd(roles.member, roles.moderator);
+        await keymaster.addGroupMember(roles.member, roles.moderator);
     }
 
     if (currentId) {
@@ -117,19 +117,19 @@ async function getRole(user) {
             return 'Owner';
         }
 
-        const isAdmin = await keymaster.groupTest(roles.admin, user);
+        const isAdmin = await keymaster.testGroup(roles.admin, user);
 
         if (isAdmin) {
             return 'Admin';
         }
 
-        const isModerator = await keymaster.groupTest(roles.moderator, user);
+        const isModerator = await keymaster.testGroup(roles.moderator, user);
 
         if (isModerator) {
             return 'Moderator';
         }
 
-        const isMember = await keymaster.groupTest(roles.member, user);
+        const isMember = await keymaster.testGroup(roles.member, user);
 
         if (isMember) {
             return 'Member';
@@ -137,7 +137,8 @@ async function getRole(user) {
 
         return null;
     }
-    catch {
+    catch (error) {
+        console.log(error);
         return null;
     }
 }
@@ -151,27 +152,27 @@ async function setRole(user, role) {
         }
 
         if (currentRole === 'Admin') {
-            await keymaster.groupRemove(roles.admin, user);
+            await keymaster.removeGroupMember(roles.admin, user);
         }
 
         if (currentRole === 'Moderator') {
-            await keymaster.groupRemove(roles.moderator, user);
+            await keymaster.removeGroupMember(roles.moderator, user);
         }
 
         if (currentRole === 'Member') {
-            await keymaster.groupRemove(roles.member, user);
+            await keymaster.removeGroupMember(roles.member, user);
         }
 
         if (role === 'Admin') {
-            await keymaster.groupAdd(roles.admin, user);
+            await keymaster.addGroupMember(roles.admin, user);
         }
 
         if (role === 'Moderator') {
-            await keymaster.groupAdd(roles.moderator, user);
+            await keymaster.addGroupMember(roles.moderator, user);
         }
 
         if (role === 'Member') {
-            await keymaster.groupAdd(roles.member, user);
+            await keymaster.addGroupMember(roles.member, user);
         }
     }
     catch (error) {
@@ -182,13 +183,13 @@ async function setRole(user, role) {
 }
 
 async function addMember(userDID) {
-    await keymaster.groupAdd(roles.member, userDID);
+    await keymaster.addGroupMember(roles.member, userDID);
     return await getRole(userDID);
 }
 
 async function userInRole(user, role) {
     try {
-        const isMember = await keymaster.groupTest(role, user);
+        const isMember = await keymaster.testGroup(role, user);
         return isMember;
     }
     catch {
@@ -296,9 +297,7 @@ app.get('/api/version', async (req, res) => {
 app.get('/api/challenge', async (req, res) => {
     try {
         const challenge = await keymaster.createChallenge({
-            challenge: {
-                callback: `${process.env.AD_HOST_URL}/api/login`
-            }
+            callback: `${process.env.AD_HOST_URL}/api/login`
         });
         req.session.challenge = challenge;
         const challengeURL = `${process.env.AD_WALLET_URL}?challenge=${challenge}`;
@@ -559,17 +558,24 @@ const options = {
 };
 
 https.createServer(options, app).listen(process.env.AD_HOST_PORT, async () => {
-
     if (process.env.AD_KEYMASTER_URL) {
         keymaster = keymaster_sdk;
-        keymaster.setURL(process.env.AD_KEYMASTER_URL);
-        await keymaster.waitUntilReady();
+        await keymaster.start({
+            url: process.env.AD_KEYMASTER_URL,
+            waitUntilReady: true
+        });
     }
     else {
         keymaster = keymaster_lib;
-        gatekeeper_sdk.setURL(process.env.AD_GATEKEEPER_URL);
-        await gatekeeper_sdk.waitUntilReady();
-        await keymaster.start(gatekeeper_sdk, db_wallet, cipher);
+        await gatekeeper_sdk.start({
+            url: process.env.AD_GATEKEEPER_URL,
+            waitUntilReady: true
+        });
+        await keymaster.start({
+            gatekeeper: gatekeeper_sdk,
+            wallet: db_wallet,
+            cipher: cipher
+        });
     }
 
     await verifyRoles();
