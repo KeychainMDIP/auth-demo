@@ -13,9 +13,9 @@
   "author": "David McFadzean <davidmc@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@mdip/cipher": "^0.4.0",
-    "@mdip/gatekeeper": "^0.4.1",
-    "@mdip/keymaster": "^0.4.1",
+    "@mdip/cipher": "^0.5.0",
+    "@mdip/gatekeeper": "^0.5.0",
+    "@mdip/keymaster": "^0.5.0",
     "axios": "^1.6.8",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
