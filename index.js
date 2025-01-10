@@ -8,11 +8,11 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
-import * as cipher from '@mdip/cipher/node';
-import * as gatekeeper_sdk from '@mdip/gatekeeper/sdk';
-import * as keymaster_sdk from '@mdip/keymaster/sdk';
-import * as keymaster_lib from '@mdip/keymaster/lib';
-import * as db_wallet from '@mdip/keymaster/db/json';
+import CipherNode from '@mdip/cipher/node';
+import GatekeeperClient from '@mdip/gatekeeper/client';
+import Keymaster from '@mdip/keymaster';
+import KeymasterClient from '@mdip/keymaster/client';
+import WalletJson from '@mdip/keymaster/wallet/json';
 
 let keymaster;
 
@@ -559,22 +559,24 @@ const options = {
 
 https.createServer(options, app).listen(process.env.AD_HOST_PORT, async () => {
     if (process.env.AD_KEYMASTER_URL) {
-        keymaster = keymaster_sdk;
-        await keymaster.start({
+        keymaster = new KeymasterClient();
+        await keymaster.connect({
             url: process.env.AD_KEYMASTER_URL,
             waitUntilReady: true
         });
     }
     else {
-        keymaster = keymaster_lib;
-        await gatekeeper_sdk.start({
+        const gatekeeper = new GatekeeperClient();
+        await gatekeeper.connect({
             url: process.env.AD_GATEKEEPER_URL,
             waitUntilReady: true
         });
-        await keymaster.start({
-            gatekeeper: gatekeeper_sdk,
-            wallet: db_wallet,
-            cipher: cipher
+        const wallet = new WalletJson();
+        const cipher = new CipherNode();
+        keymaster = new Keymaster({
+            gatekeeper,
+            wallet,
+            cipher
         });
     }
 
