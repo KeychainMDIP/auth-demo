@@ -158,6 +158,7 @@ function ViewLogin() {
     const [responseDID, setResponseDID] = useState('');
     const [loggingIn, setLoggingIn] = useState(false);
     const [challengeURL, setChallengeURL] = useState(null);
+    const [extensionURL, setExtensionURL] = useState('');
     const [challengeCopied, setChallengeCopied] = useState(false);
 
     const navigate = useNavigate();
@@ -181,6 +182,7 @@ function ViewLogin() {
                 const response = await axios.get(`/api/challenge`);
                 const { challenge, challengeURL } = response.data;
                 setChallengeDID(challenge);
+                setExtensionURL(`mdip://auth?challenge=${challenge}`);
                 setChallengeURL(encodeURI(challengeURL));
             }
             catch (error) {
@@ -236,7 +238,11 @@ function ViewLogin() {
                                     <QRCodeSVG value={challengeURL} />
                                 </a>
                             }
-                            <Typography style={{ fontFamily: 'Courier' }}>
+                            <Typography
+                                component="a"
+                                href={extensionURL}
+                                style={{ fontFamily: 'Courier' }}
+                            >
                                 {challengeDID}
                             </Typography>
                         </TableCell>
