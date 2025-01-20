@@ -1,5 +1,16 @@
 # auth-demo
 
+## Running
+
+- git clone this repo
+- cd auth-demo
+- to run in docker
+  - run `./start-demo`
+- to run in node
+  - run `./rebuildDemo`
+- navigate to https://localhost:3000
+
+
 ## QR code integration
 
 ![login page](login.png)
