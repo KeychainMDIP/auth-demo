@@ -179,9 +179,9 @@ function ViewLogin() {
                 }, 1000); // Check every second
 
                 const response = await axios.get(`/api/challenge`);
-                const { challenge, challengeURL } = response.data;
+                const { challenge } = response.data;
                 setChallengeDID(challenge);
-                setChallengeURL(encodeURI(challengeURL));
+                setChallengeURL(`mdip://auth?challenge=${challenge}`);
             }
             catch (error) {
                 window.alert(error);
@@ -232,12 +232,12 @@ function ViewLogin() {
                         <TableCell>Challenge:</TableCell>
                         <TableCell>
                             {challengeURL &&
-                                <a href={challengeURL} target="_blank" rel="noopener noreferrer">
+                                <a href={challengeURL}>
                                     <QRCodeSVG value={challengeURL} />
                                 </a>
                             }
                             <Typography style={{ fontFamily: 'Courier' }}>
-                                {challengeDID}
+                                <a href={challengeURL}>{challengeDID}</a>
                             </Typography>
                         </TableCell>
                         <TableCell>
