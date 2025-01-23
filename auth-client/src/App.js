@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
     useNavigate,
     useParams,
@@ -161,16 +161,16 @@ function ViewLogin() {
     const [challengeCopied, setChallengeCopied] = useState(false);
 
     const navigate = useNavigate();
-    let intervalId;
+    const intervalIdRef = useRef();
 
     useEffect(() => {
         const init = async () => {
             try {
-                intervalId = setInterval(async () => {
+                intervalIdRef.current = setInterval(async () => {
                     try {
                         const response = await axios.get('/api/check-auth');
                         if (response.data.isAuthenticated) {
-                            clearInterval(intervalId);
+                            clearInterval(intervalIdRef.current);
                             navigate('/');
                         }
                     } catch (error) {
@@ -190,7 +190,7 @@ function ViewLogin() {
 
         init();
         // Clear the interval when the component is unmounted
-        return () => clearInterval(intervalId);
+        return () => clearInterval(intervalIdRef.current);
     }, []);
 
     async function login() {
