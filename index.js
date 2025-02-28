@@ -562,14 +562,18 @@ https.createServer(options, app).listen(process.env.AD_HOST_PORT, async () => {
         keymaster = new KeymasterClient();
         await keymaster.connect({
             url: process.env.AD_KEYMASTER_URL,
-            waitUntilReady: true
+            waitUntilReady: true,
+            intervalSeconds: 5,
+            chatty: true,
         });
     }
     else {
         const gatekeeper = new GatekeeperClient();
         await gatekeeper.connect({
             url: process.env.AD_GATEKEEPER_URL,
-            waitUntilReady: true
+            waitUntilReady: true,
+            intervalSeconds: 5,
+            chatty: true,
         });
         const wallet = new WalletJson();
         const cipher = new CipherNode();
