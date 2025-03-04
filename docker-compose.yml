@@ -10,8 +10,7 @@ services:
       - AD_GATEKEEPER_URL=${AD_GATEKEEPER_URL}
       - AD_KEYMASTER_URL=${AD_KEYMASTER_URL}
       - AD_WALLET_URL=${AD_WALLET_URL}
-      - AD_KEY_FILE=${AD_KEY_FILE}
-      - AD_CERT_FILE=${AD_CERT_FILE}
     volumes:
       - ./data:/app/data
-    network_mode: host
+    ports:
+      - "3000:3000"
