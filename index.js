@@ -550,7 +550,7 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled rejection at:', promise, 'reason:', reason);
 });
 
-app.listen(process.env.AD_HOST_PORT, async () => {
+app.listen(process.env.AD_HOST_PORT, '0.0.0.0', async () => {
     if (process.env.AD_KEYMASTER_URL) {
         keymaster = new KeymasterClient();
         await keymaster.connect({
@@ -559,6 +559,7 @@ app.listen(process.env.AD_HOST_PORT, async () => {
             intervalSeconds: 5,
             chatty: true,
         });
+        console.log(`auth-demo using keymaster at ${process.env.AD_KEYMASTER_URL}`);
     }
     else {
         const gatekeeper = new GatekeeperClient();
@@ -575,11 +576,11 @@ app.listen(process.env.AD_HOST_PORT, async () => {
             wallet,
             cipher
         });
+        console.log(`auth-demo using gatekeeper at ${process.env.AD_GATEKEEPER_URL}`);
     }
 
     await verifyRoles();
     await verifyDb();
-    console.log(`auth-demo using keymaster at ${process.env.AD_KEYMASTER_URL}`);
     console.log(`auth-demo using wallet at ${process.env.AD_WALLET_URL}`);
     console.log(`auth-demo listening at ${process.env.AD_HOST_URL}`);
 });
