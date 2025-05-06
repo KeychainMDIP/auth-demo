@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-set -e
-
-pushd auth-client
-npm install
-popd
-npm install
-npm --prefix auth-client run build
-node index.js

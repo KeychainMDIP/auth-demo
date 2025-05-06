@@ -1,17 +1,37 @@
-# auth-demo
+# MDIP Auth Demo
 
-## Running
+### Overview
+This repository hosts a simple authentication demo using MDIP. It is split into two main folders:
 
-- git clone this repo
-- cd auth-demo
-- to run in docker
-  - run `./start-demo`
-- to run in node
-  - run `./rebuildDemo`
-- navigate to https://localhost:3000
+- **client/** – A React front-end
+- **server/** – An Express/Node back-end
 
+### Running the Demo
 
-## QR code integration
+You can run the demo in two ways:
+
+1. **Run client and server together** – The server will serve the built React client.
+2. **Run client and server separately** – The client dev server communicates via an API URL to the back end.
+
+### Repository Structure
+
+- **client/**  
+  A React front-end, with a `.env` controlling its API endpoint and HTTPS dev settings.
+- **server/**  
+  An Express server that provides `/api` endpoints, using Keymaster for DID-based authentication. Has a .env to set keymaster, Gatekeeper, callback, whether to serve the React client, HTTPS dev settings and CORS for external React app.
+
+### Quick Start
+
+1. **Install** dependencies for both client and server:
+  - `npm run install`  
+
+2. **Run** both in parallel:
+  - `npm start`  
+
+3. **Visit** the site in a browser:
+  - If you’re serving the client from the server, go to `https://localhost:3000`.
+
+### QR code integration
 
 ![login page](login.png)
 
@@ -52,3 +72,7 @@ Both login methods return a JSON object indicating whether the login was success
 The diagram below details the MDIP Authentication process of a user Alice accessing a 3rd Party Website and authenticating herself using a smart-phone wallet to scan the Challenge QR code from the Website's login page. The diagram demonstrates the 3rd Party Website operator using a hosted Node-as-a-Service MDIP gatekeeper infrastructure provider.
 
 ![MDIP_Auth_Seq](https://github.com/user-attachments/assets/064d1fbf-1d96-4284-b739-bd17e78d159b)
+
+### Further Reading
+- **client/README.md** – Explains how to run the React client independently.
+- **server/README.md** – Explains how to run the auth server independently.

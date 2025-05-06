@@ -18,6 +18,13 @@ let keymaster;
 
 dotenv.config();
 
+const HOST_PORT = Number(process.env.AD_HOST_PORT) || 3000;
+const HOST_URL = process.env.AD_HOST_URL || 'https://localhost:3000';
+const GATEKEEPER_URL = process.env.AD_GATEKEEPER_URL || 'http://localhost:4224';
+const WALLET_URL = process.env.AD_WALLET_URL || 'http://localhost:4224';
+const KEY_FILE = process.env.AD_KEY_FILE || 'localhost-key.pem';
+const CERT_FILE = process.env.AD_CERT_FILE || 'localhost.pem';
+
 const app = express();
 const dbName = 'data/db.json';
 const logins = {};
@@ -39,9 +46,6 @@ app.use(session({
     saveUninitialized: true,
     cookie: { secure: true } // Set to true if using HTTPS
 }));
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-app.use(express.static(path.join(__dirname, 'auth-client/build')));
 
 function loadDb() {
     if (fs.existsSync(dbName)) {
@@ -285,6 +289,17 @@ async function loginUser(response) {
     return verify;
 }
 
+const corsOptions = {
+    origin: process.env.AD_CORS_SITE_ORIGIN || 'https://localhost:3001', // Origin needs to be specified with credentials true
+    methods: ['GET', 'POST'],  // Specify which methods are allowed (e.g., GET, POST)
+    credentials: true,         // Enable if you need to send cookies or authorization headers
+    optionsSuccessStatus: 200  // Some legacy browsers choke on 204
+};
+
+app.use(cors(corsOptions));
+
+app.options('/api/*', cors(corsOptions));
+
 app.get('/api/version', async (req, res) => {
     try {
         res.json(1);
@@ -297,10 +312,10 @@ app.get('/api/version', async (req, res) => {
 app.get('/api/challenge', async (req, res) => {
     try {
         const challenge = await keymaster.createChallenge({
-            callback: `${process.env.AD_HOST_URL}/api/login`
+            callback: `${HOST_URL}/api/login`
         });
         req.session.challenge = challenge;
-        const challengeURL = `${process.env.AD_WALLET_URL}?challenge=${challenge}`;
+        const challengeURL = `${WALLET_URL}?challenge=${challenge}`;
 
         const doc = await keymaster.resolveDID(challenge);
         console.log(JSON.stringify(doc, null, 4));
@@ -310,15 +325,6 @@ app.get('/api/challenge', async (req, res) => {
         res.status(500).send(error.toString());
     }
 });
-
-const corsOptions = {
-    origin: '*',               // Allow all origins (any wallet) to login
-    methods: ['GET', 'POST'],  // Specify which methods are allowed (e.g., GET, POST)
-    credentials: true,         // Enable if you need to send cookies or authorization headers
-    optionsSuccessStatus: 200  // Some legacy browsers choke on 204
-};
-
-app.options('/api/login', cors(corsOptions)); // Handle preflight requests for this route
 
 app.get('/api/login', cors(corsOptions), async (req, res) => {
     try {
@@ -534,14 +540,20 @@ app.put('/api/profile/:did/role', isAdmin, async (req, res) => {
     }
 });
 
-app.use((req, res) => {
-    if (!req.path.startsWith('/api')) {
-        res.sendFile(path.join(__dirname, 'auth-client/build', 'index.html'));
-    } else {
-        console.warn(`Warning: Unhandled API endpoint - ${req.method} ${req.originalUrl}`);
-        res.status(404).json({ message: 'Endpoint not found' });
-    }
-});
+if (process.env.AD_SERVE_CLIENT !== 'false') {
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const clientBuildPath = path.join(__dirname, '../../client/build');
+    app.use(express.static(clientBuildPath));
+
+    app.use((req, res) => {
+        if (!req.path.startsWith('/api')) {
+            res.sendFile(path.join(clientBuildPath, 'index.html'));
+        } else {
+            console.warn(`Warning: Unhandled API endpoint - ${req.method} ${req.originalUrl}`);
+            res.status(404).json({ message: 'Endpoint not found' });
+        }
+    });
+}
 
 process.on('uncaughtException', (error) => {
     console.error('Unhandled exception caught', error);
@@ -553,11 +565,11 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Read the certificate and key
 const options = {
-    key: fs.readFileSync(`${process.env.AD_KEY_FILE}`),
-    cert: fs.readFileSync(`${process.env.AD_CERT_FILE}`)
+    key: fs.readFileSync(`${KEY_FILE}`),
+    cert: fs.readFileSync(`${CERT_FILE}`)
 };
 
-https.createServer(options, app).listen(process.env.AD_HOST_PORT, async () => {
+https.createServer(options, app).listen(HOST_PORT, async () => {
     if (process.env.AD_KEYMASTER_URL) {
         keymaster = new KeymasterClient();
         await keymaster.connect({
@@ -566,11 +578,12 @@ https.createServer(options, app).listen(process.env.AD_HOST_PORT, async () => {
             intervalSeconds: 5,
             chatty: true,
         });
+        console.log(`auth-demo using keymaster at ${process.env.AD_KEYMASTER_URL}`);
     }
     else {
         const gatekeeper = new GatekeeperClient();
         await gatekeeper.connect({
-            url: process.env.AD_GATEKEEPER_URL,
+            url: GATEKEEPER_URL,
             waitUntilReady: true,
             intervalSeconds: 5,
             chatty: true,
@@ -582,13 +595,13 @@ https.createServer(options, app).listen(process.env.AD_HOST_PORT, async () => {
             wallet,
             cipher
         });
+        console.log(`auth-demo using gatekeeper at ${GATEKEEPER_URL}`);
     }
 
     await verifyRoles();
     await verifyDb();
-    console.log(`auth-demo using keymaster at ${process.env.AD_KEYMASTER_URL}`);
-    console.log(`auth-demo using wallet at ${process.env.AD_WALLET_URL}`);
-    console.log(`auth-demo using key file ${process.env.AD_KEY_FILE}`);
-    console.log(`auth-demo using cert file ${process.env.AD_CERT_FILE}`);
-    console.log(`auth-demo listening at ${process.env.AD_HOST_URL}`);
+    console.log(`auth-demo using wallet at ${WALLET_URL}`);
+    console.log(`auth-demo using key file ${KEY_FILE}`);
+    console.log(`auth-demo using cert file ${CERT_FILE}`);
+    console.log(`auth-demo listening at ${HOST_URL}`);
 });

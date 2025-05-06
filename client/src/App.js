@@ -15,6 +15,11 @@ import { QRCodeSVG } from 'qrcode.react';
 
 import './App.css';
 
+const api = axios.create({
+    baseURL: process.env.REACT_APP_API_URL || '/api',
+    withCredentials: true,
+});
+
 function App() {
     return (
         <Router>
@@ -60,7 +65,7 @@ function Home() {
     useEffect(() => {
         const init = async () => {
             try {
-                const response = await axios.get(`/api/check-auth`);
+                const response = await api.get(`/check-auth`);
                 const auth = response.data;
                 setAuth(auth);
                 setIsAuthenticated(auth.isAuthenticated);
@@ -169,7 +174,7 @@ function ViewLogin() {
             try {
                 intervalIdRef.current = setInterval(async () => {
                     try {
-                        const response = await axios.get('/api/check-auth');
+                        const response = await api.get(`/check-auth`);
                         if (response.data.isAuthenticated) {
                             clearInterval(intervalIdRef.current);
                             navigate('/');
@@ -179,7 +184,7 @@ function ViewLogin() {
                     }
                 }, 1000); // Check every second
 
-                const response = await axios.get(`/api/challenge`);
+                const response = await api.get(`/challenge`);
                 const { challenge, challengeURL } = response.data;
                 setChallengeDID(challenge);
                 setExtensionURL(`mdip://auth?challenge=${challenge}`);
@@ -199,7 +204,7 @@ function ViewLogin() {
         setLoggingIn(true);
 
         try {
-            const getAuth = await axios.post(`/api/login`, { challenge: challengeDID, response: responseDID });
+            const getAuth = await api.post(`/login`, { challenge: challengeDID, response: responseDID });
 
             if (getAuth.data.authenticated) {
                 navigate('/');
@@ -283,7 +288,7 @@ function ViewLogout() {
     useEffect(() => {
         const init = async () => {
             try {
-                await axios.post(`/api/logout`);
+                await api.post(`/logout`);
                 navigate('/');
             }
             catch (error) {
@@ -301,7 +306,7 @@ function ViewMembers() {
     useEffect(() => {
         const init = async () => {
             try {
-                const response = await axios.get(`/api/check-auth`);
+                const response = await api.get(`/check-auth`);
                 const auth = response.data;
 
                 if (!auth.isMember) {
@@ -331,7 +336,7 @@ function ViewModerators() {
     useEffect(() => {
         const init = async () => {
             try {
-                const response = await axios.get(`/api/users`);
+                const response = await api.get(`/users`);
                 setUsers(response.data);
             }
             catch (error) {
@@ -366,7 +371,7 @@ function ViewAdmins() {
     useEffect(() => {
         const init = async () => {
             try {
-                const response = await axios.get(`/api/check-auth`);
+                const response = await api.get(`/check-auth`);
                 const auth = response.data;
 
                 if (!auth.isAdmin) {
@@ -396,7 +401,7 @@ function ViewOwner() {
     useEffect(() => {
         const init = async () => {
             try {
-                const response = await axios.get(`/api/admin`);
+                const response = await api.get(`/admin`);
                 setAdminInfo(response.data);
             }
             catch (error) {
@@ -430,12 +435,12 @@ function ViewProfile() {
     useEffect(() => {
         const init = async () => {
             try {
-                const getAuth = await axios.get(`/api/check-auth`);
+                const getAuth = await api.get(`/check-auth`);
                 const auth = getAuth.data;
 
                 setAuth(auth);
 
-                const getProfile = await axios.get(`/api/profile/${did}`);
+                const getProfile = await api.get(`/profile/${did}`);
                 const profile = getProfile.data;
 
                 setProfile(profile);
@@ -463,7 +468,7 @@ function ViewProfile() {
     async function saveName() {
         try {
             const name = newName.trim();
-            await axios.put(`/api/profile/${profile.did}/name`, { name });
+            await api.put(`/profile/${profile.did}/name`, { name });
             setNewName(name);
             setCurrentName(name);
             profile.name = name;
@@ -476,7 +481,7 @@ function ViewProfile() {
     async function saveRole() {
         try {
             const role = newRole;
-            await axios.put(`/api/profile/${profile.did}/role`, { role });
+            await api.put(`/profile/${profile.did}/role`, { role });
             setNewRole(role);
             setCurrentRole(role);
             profile.role = role;

@@ -7,20 +7,18 @@ WORKDIR /app
 # Copy package.json and package-lock.json to the working directory
 COPY package*.json .
 
+# Copy the client build to the client directory
+COPY client/package*.json ./client/
+COPY client/public ./client/public/
+COPY client/src ./client/src/
+
+# Copy the server build to the server directory
+COPY server/package*.json ./server/
+COPY server/src ./server/src/
+COPY server/*.pem ./server/
+
 # Install dependencies
 RUN npm ci
 
-# Copy the client build to the auth-client directory
-COPY auth-client/package*.json ./auth-client/
-RUN cd auth-client && npm ci
-
-COPY auth-client/public ./auth-client/public/
-COPY auth-client/src ./auth-client/src/
-RUN cd auth-client && npm run build
-
-# Copy app
-COPY *.js .
-COPY *.pem .
-
 # Run...
-CMD ["node", "index.js"]
+CMD ["npm", "start"]
