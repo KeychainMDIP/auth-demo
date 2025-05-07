@@ -12,9 +12,9 @@
   "author": "David McFadzean <davidmc@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@mdip/cipher": "^1.0.0",
-    "@mdip/gatekeeper": "^1.0.0",
-    "@mdip/keymaster": "^1.0.0",
+    "@mdip/cipher": "^1.1.0",
+    "@mdip/gatekeeper": "^1.1.0",
+    "@mdip/keymaster": "^1.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",

@@ -29,7 +29,7 @@ You can run the demo in two ways:
   - `npm start`  
 
 3. **Visit** the site in a browser:
-  - If you’re serving the client from the server, go to `https://localhost:3000`.
+  - If you’re serving the client from the server, go to `http://localhost:3000`.
 
 ### QR code integration
 
