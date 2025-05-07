@@ -11,14 +11,12 @@ This folder contains the Express server that demonstrates MDIP-based authenticat
 2. **.env configuration**
     - `AD_HOST_PORT=3000`
     - `AD_SERVE_CLIENT=true` (Whether to serve the client build or not)
-    - `AD_CORS_SITE_ORIGIN=https://localhost:3001` (URL of remote client)
-    - `AD_KEY_FILE=localhost-key.pem`
-    - `AD_CERT_FILE=localhost.pem`
+    - `AD_CORS_SITE_ORIGIN=http://localhost:3001` (URL of remote client)
     - Additional variables like `AD_KEYMASTER_URL`, `AD_GATEKEEPER_URL`, `AD_WALLET_URL` for Keymaster/Gatekeeper integration.
 
 3. **Run**:
     - `npm start`
-      Starts the server at `https://localhost:3000`.
+      Starts the server at `http://localhost:3000`.
 
 ### Serving the Client
 If `AD_SERVE_CLIENT=true` and you have built the React app (`npm run build` in client), this server will serve that `build/` folder for all non-API requests.

@@ -3,7 +3,6 @@ import session from 'express-session';
 import morgan from 'morgan';
 import path from 'path';
 import fs from 'fs';
-import https from 'https';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -19,11 +18,9 @@ let keymaster;
 dotenv.config();
 
 const HOST_PORT = Number(process.env.AD_HOST_PORT) || 3000;
-const HOST_URL = process.env.AD_HOST_URL || 'https://localhost:3000';
+const HOST_URL = process.env.AD_HOST_URL || 'http://localhost:3000';
 const GATEKEEPER_URL = process.env.AD_GATEKEEPER_URL || 'http://localhost:4224';
 const WALLET_URL = process.env.AD_WALLET_URL || 'http://localhost:4224';
-const KEY_FILE = process.env.AD_KEY_FILE || 'localhost-key.pem';
-const CERT_FILE = process.env.AD_CERT_FILE || 'localhost.pem';
 
 const app = express();
 const dbName = 'data/db.json';
@@ -44,7 +41,7 @@ app.use(session({
     secret: 'MDIP',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: true } // Set to true if using HTTPS
+    cookie: { secure: false } // Set to true if using HTTPS
 }));
 
 function loadDb() {
@@ -290,7 +287,7 @@ async function loginUser(response) {
 }
 
 const corsOptions = {
-    origin: process.env.AD_CORS_SITE_ORIGIN || 'https://localhost:3001', // Origin needs to be specified with credentials true
+    origin: process.env.AD_CORS_SITE_ORIGIN || 'http://localhost:3001', // Origin needs to be specified with credentials true
     methods: ['GET', 'POST'],  // Specify which methods are allowed (e.g., GET, POST)
     credentials: true,         // Enable if you need to send cookies or authorization headers
     optionsSuccessStatus: 200  // Some legacy browsers choke on 204
@@ -563,13 +560,7 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled rejection at:', promise, 'reason:', reason);
 });
 
-// Read the certificate and key
-const options = {
-    key: fs.readFileSync(`${KEY_FILE}`),
-    cert: fs.readFileSync(`${CERT_FILE}`)
-};
-
-https.createServer(options, app).listen(HOST_PORT, async () => {
+app.listen(HOST_PORT, '0.0.0.0', async () => {
     if (process.env.AD_KEYMASTER_URL) {
         keymaster = new KeymasterClient();
         await keymaster.connect({
@@ -601,7 +592,5 @@ https.createServer(options, app).listen(HOST_PORT, async () => {
     await verifyRoles();
     await verifyDb();
     console.log(`auth-demo using wallet at ${WALLET_URL}`);
-    console.log(`auth-demo using key file ${KEY_FILE}`);
-    console.log(`auth-demo using cert file ${CERT_FILE}`);
     console.log(`auth-demo listening at ${HOST_URL}`);
 });
