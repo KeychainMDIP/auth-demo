@@ -1,4 +1,8 @@
-import express from 'express';
+import express, {
+    Request,
+    Response,
+    NextFunction
+} from 'express';
 import session from 'express-session';
 import morgan from 'morgan';
 import path from 'path';
@@ -13,7 +17,7 @@ import Keymaster from '@mdip/keymaster';
 import KeymasterClient from '@mdip/keymaster/client';
 import WalletJson from '@mdip/keymaster/wallet/json';
 
-let keymaster;
+let keymaster: Keymaster | KeymasterClient;
 
 dotenv.config();
 
@@ -24,7 +28,24 @@ const WALLET_URL = process.env.AD_WALLET_URL || 'http://localhost:4224';
 
 const app = express();
 const dbName = 'data/db.json';
-const logins = {};
+const logins: Record<string, {
+    response: string;
+    challenge: string;
+    did: string;
+    verify: any;
+}> = {};
+
+interface Database {
+    users?: Record<string, {
+        firstLogin?: string;
+        lastLogin?: string;
+        logins?: number;
+        role?: string;
+        name?: string;
+        [key: string]: any;
+    }>;
+    [key: string]: any;
+}
 
 const roles = {
     owner: 'auth-demo-owner',
@@ -44,28 +65,30 @@ app.use(session({
     cookie: { secure: false } // Set to true if using HTTPS
 }));
 
-function loadDb() {
+function loadDb(): Database {
     if (fs.existsSync(dbName)) {
-        return JSON.parse(fs.readFileSync(dbName));
+        return JSON.parse(fs.readFileSync(dbName, 'utf-8'));
     }
     else {
         return {};
     }
 }
 
-function writeDb(db) {
+function writeDb(db: Database): void {
     fs.writeFileSync(dbName, JSON.stringify(db, null, 4));
 }
 
-let ownerDID = null;
+let ownerDID = '';
 
-async function verifyRoles() {
+async function verifyRoles(): Promise<void> {
     const currentId = await keymaster.getCurrentId();
 
     try {
         const docs = await keymaster.resolveDID(roles.owner);
-        ownerDID = docs.didDocument.id;
-        console.log(`${roles.owner}: ${ownerDID}`);
+        if (docs.didDocument?.id) {
+            ownerDID = docs.didDocument.id;
+            console.log(`${roles.owner}: ${ownerDID}`);
+        }
     }
     catch (error) {
         console.log(`Creating ID ${roles.owner}`);
@@ -76,7 +99,7 @@ async function verifyRoles() {
 
     try {
         const docs = await keymaster.resolveDID(roles.admin);
-        console.log(`${roles.admin}: ${docs.didDocument.id}`);
+        console.log(`${roles.admin}: ${docs.didDocument?.id}`);
     }
     catch (error) {
         console.log(`Creating group ${roles.admin}`);
@@ -87,7 +110,7 @@ async function verifyRoles() {
 
     try {
         const docs = await keymaster.resolveDID(roles.moderator);
-        console.log(`${roles.moderator}: ${docs.didDocument.id}`);
+        console.log(`${roles.moderator}: ${docs.didDocument?.id}`);
     }
     catch (error) {
         console.log(`Creating group ${roles.moderator}`);
@@ -98,7 +121,7 @@ async function verifyRoles() {
 
     try {
         const docs = await keymaster.resolveDID(roles.member);
-        console.log(`${roles.member}: ${docs.didDocument.id}`);
+        console.log(`${roles.member}: ${docs.didDocument?.id}`);
     }
     catch (error) {
         console.log(`Creating group ${roles.member}`);
@@ -112,7 +135,7 @@ async function verifyRoles() {
     }
 }
 
-async function getRole(user) {
+async function getRole(user: string): Promise<string | null> {
     try {
         if (user === ownerDID) {
             return 'Owner';
@@ -144,7 +167,7 @@ async function getRole(user) {
     }
 }
 
-async function setRole(user, role) {
+async function setRole(user: string, role: string): Promise<string | null> {
     try {
         const currentRole = await getRole(user);
 
@@ -183,22 +206,21 @@ async function setRole(user, role) {
     return await getRole(user);
 }
 
-async function addMember(userDID) {
+async function addMember(userDID: string): Promise<string | null> {
     await keymaster.addGroupMember(roles.member, userDID);
     return await getRole(userDID);
 }
 
-async function userInRole(user, role) {
+async function userInRole(user: string, role: string): Promise<boolean> {
     try {
-        const isMember = await keymaster.testGroup(role, user);
-        return isMember;
+        return await keymaster.testGroup(role, user);
     }
     catch {
         return false;
     }
 }
 
-async function verifyDb() {
+async function verifyDb(): Promise<void> {
     console.log('verifying db...');
 
     const db = loadDb();
@@ -215,7 +237,9 @@ async function verifyDb() {
                 role = await addMember(userDID);
             }
 
-            db.users[userDID].role = role;
+            if (role) {
+                db.users[userDID].role = role;
+            }
 
             if (role === 'Owner') {
                 db.users[userDID].name = roles.owner;
@@ -226,30 +250,35 @@ async function verifyDb() {
     }
 }
 
-function isAuthenticated(req, res, next) {
+function isAuthenticated(req: Request, res: Response, next: NextFunction): void {
     if (req.session.user) {
         return next();
     }
     res.status(401).send('You need to log in first');
 }
 
-function isAdmin(req, res, next) {
-    isAuthenticated(req, res, () => {
-        const db = loadDb();
+function isAdmin(req: Request, res: Response, next: NextFunction): void {
+    isAuthenticated(req, res, async () => {
+        const userDid = req.session.user?.did;
+        if (!userDid) {
+            res.status(403).send('Admin access required');
+            return;
+        }
 
-        if (userInRole(req.session.user.did, roles.admin)) {
+        const inAdminRole = await userInRole(userDid, roles.admin);
+        if (inAdminRole) {
             return next();
         }
         res.status(403).send('Admin access required');
     });
 }
 
-async function loginUser(response) {
+async function loginUser(response: string): Promise<any> {
     const verify = await keymaster.verifyResponse(response, { retries: 10 });
 
     if (verify.match) {
         const challenge = verify.challenge;
-        const did = verify.responder;
+        const did = verify.responder!;
         const db = loadDb();
 
         if (!db.users) {
@@ -258,9 +287,9 @@ async function loginUser(response) {
 
         const now = new Date().toISOString();
 
-        if (Object.keys(db.users).includes(did)) {
+        if (db.users[did]) {
             db.users[did].lastLogin = now;
-            db.users[did].logins += 1;
+            db.users[did].logins = (db.users[did].logins || 0) + 1;
         }
         else {
             const role = await getRole(did) || await addMember(did);
@@ -269,7 +298,7 @@ async function loginUser(response) {
                 firstLogin: now,
                 lastLogin: now,
                 logins: 1,
-                role: role,
+                role: role!,
             }
         }
 
@@ -295,20 +324,21 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-app.options('/api/*', cors(corsOptions));
+app.options('/api/{*path}', cors(corsOptions));
 
-app.get('/api/version', async (req, res) => {
+app.get('/api/version', async (_: Request, res: Response) => {
     try {
         res.json(1);
     } catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
-app.get('/api/challenge', async (req, res) => {
+app.get('/api/challenge', async (req: Request, res: Response) => {
     try {
         const challenge = await keymaster.createChallenge({
+            // @ts-ignore
             callback: `${HOST_URL}/api/login`
         });
         req.session.challenge = challenge;
@@ -319,55 +349,76 @@ app.get('/api/challenge', async (req, res) => {
         res.json({ challenge, challengeURL });
     } catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
-app.get('/api/login', cors(corsOptions), async (req, res) => {
+app.get('/api/login', cors(corsOptions), async (req: Request, res: Response) => {
     try {
         const { response } = req.query;
+        if (typeof response !== 'string') {
+            res.status(400).json({ error: 'Missing or invalid response param' });
+            return;
+        }
         const verify = await loginUser(response);
-        req.session.user = logins[verify.challenge];
-
+        if (!verify.challenge) {
+            res.json({ authenticated: false });
+            return;
+        }
+        req.session.user = {
+            did: verify.responder
+        };
         res.json({ authenticated: verify.match });
     } catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
-app.post('/api/login', cors(corsOptions), async (req, res) => {
+app.post('/api/login', cors(corsOptions), async (req: Request, res: Response) => {
     try {
         const { response } = req.body;
         const verify = await loginUser(response);
-        req.session.user = logins[verify.challenge];
-
+        if (!verify.challenge) {
+            res.json({ authenticated: false });
+            return;
+        }
+        req.session.user = {
+            did: verify.responder
+        };
         res.json({ authenticated: verify.match });
     } catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
-app.post('/api/logout', async (req, res) => {
+app.post('/api/logout', async (req: Request, res: Response) => {
     try {
-        req.session.destroy();
+        req.session.destroy(err => {
+            if (err) {
+                console.log(err);
+            }
+        });
         res.redirect('/login');
     }
     catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
-app.get('/api/check-auth', async (req, res) => {
+app.get('/api/check-auth', async (req: Request, res: Response) => {
     try {
         if (!req.session.user && req.session.challenge) {
-            req.session.user = logins[req.session.challenge];
+            const challengeData = logins[req.session.challenge];
+            if (challengeData) {
+                req.session.user = { did: challengeData.did };
+            }
         }
 
-        const isAuthenticated = req.session.user ? true : false;
-        const userDID = isAuthenticated ? req.session.user.did : null;
+        const isAuthenticated = !!req.session.user;
+        const userDID = isAuthenticated ? req.session.user?.did : null;
         const db = loadDb();
 
         let isOwner = false;
@@ -375,10 +426,13 @@ app.get('/api/check-auth', async (req, res) => {
         let isModerator = false;
         let isMember = false;
 
-        const profile = isAuthenticated ? db.users[userDID] : null;
+        let profile: any = null;
 
-        if (profile) {
-            isOwner = (userDID === ownerDID);
+        if (isAuthenticated && userDID && db.users) {
+            profile = db.users[userDID] || null;
+            if (userDID === ownerDID) {
+                isOwner = true;
+            }
             isAdmin = await userInRole(userDID, roles.admin);
             isModerator = await userInRole(userDID, roles.moderator);
             isMember = await userInRole(userDID, roles.member);
@@ -398,62 +452,64 @@ app.get('/api/check-auth', async (req, res) => {
     }
     catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
-app.get('/api/users', isAuthenticated, async (req, res) => {
+app.get('/api/users', isAuthenticated, async (_: Request, res: Response) => {
     try {
         const db = loadDb();
-        const users = Object.keys(db.users);
+        const users = db.users ? Object.keys(db.users) : [];
         res.json(users);
     }
     catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
-app.get('/api/admin', isAdmin, async (req, res) => {
+app.get('/api/admin', isAdmin, async (_: Request, res: Response) => {
     try {
         res.json(loadDb());
     }
     catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
-app.get('/api/profile/:did', isAuthenticated, async (req, res) => {
+app.get('/api/profile/:did', isAuthenticated, async (req: Request, res: Response) => {
     try {
         const did = req.params.did;
         const db = loadDb();
 
-        if (!Object.keys(db.users).includes(did)) {
-            return res.status(404).send("Not found");
+        if (!db.users || !db.users[did]) {
+            res.status(404).send('Not found');
+            return;
         }
 
         const profile = db.users[did];
 
         profile.did = did;
-        profile.role = await getRole(did);
+        profile.role = (await getRole(did))!;
         profile.isUser = (req.session?.user?.did === did);
 
         res.json(profile);
     }
     catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
-app.get('/api/profile/:did/name', isAuthenticated, async (req, res) => {
+app.get('/api/profile/:did/name', isAuthenticated, async (req: Request, res: Response) => {
     try {
         const did = req.params.did;
         const db = loadDb();
 
-        if (!Object.keys(db.users).includes(did)) {
-            return res.status(404).send("Not found");
+        if (!db.users || !db.users[did]) {
+            res.status(404).send('Not found');
+            return;
         }
 
         const profile = db.users[did];
@@ -461,20 +517,26 @@ app.get('/api/profile/:did/name', isAuthenticated, async (req, res) => {
     }
     catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
-app.put('/api/profile/:did/name', isAuthenticated, async (req, res) => {
+app.put('/api/profile/:did/name', isAuthenticated, async (req: Request, res: Response) => {
     try {
         const did = req.params.did;
         const { name } = req.body;
 
-        if (req.session.user.did !== did) {
-            return res.status(403).json({ message: 'Forbidden' });;
+        if (!req.session.user || req.session.user.did !== did) {
+            res.status(403).json({ message: 'Forbidden' });
+            return;
         }
 
         const db = loadDb();
+        if (!db.users || !db.users[did]) {
+            res.status(404).send('Not found');
+            return;
+        }
+
         db.users[did].name = name;
         writeDb(db);
 
@@ -482,29 +544,30 @@ app.put('/api/profile/:did/name', isAuthenticated, async (req, res) => {
     }
     catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
 const validRoles = ['Admin', 'Moderator', 'Member'];
 
-app.get('/api/roles', async (req, res) => {
+app.get('/api/roles', async (_: Request, res: Response) => {
     try {
         res.json(validRoles);
     }
     catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
-app.get('/api/profile/:did/role', isAuthenticated, async (req, res) => {
+app.get('/api/profile/:did/role', isAuthenticated, async (req: Request, res: Response) => {
     try {
         const did = req.params.did;
         const db = loadDb();
 
-        if (!Object.keys(db.users).includes(did)) {
-            return res.status(404).send("Not found");
+        if (!db.users || !db.users[did]) {
+            res.status(404).send('Not found');
+            return;
         }
 
         const profile = db.users[did];
@@ -512,28 +575,34 @@ app.get('/api/profile/:did/role', isAuthenticated, async (req, res) => {
     }
     catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 
-app.put('/api/profile/:did/role', isAdmin, async (req, res) => {
+app.put('/api/profile/:did/role', isAdmin, async (req: Request, res: Response) => {
     try {
         const did = req.params.did;
         const { role } = req.body;
 
         if (!validRoles.includes(role)) {
-            return res.status(400).send(`valid roles include ${validRoles}`);
+            res.status(400).send(`valid roles include ${validRoles}`);
+            return;
         }
 
         const db = loadDb();
-        db.users[did].role = setRole(did, role);
+        if (!db.users || !db.users[did]) {
+            res.status(404).send('Not found');
+            return;
+        }
+
+        db.users[did].role = (await setRole(did, role))!;
         writeDb(db);
 
         res.json({ ok: true, message: `role set to ${role}` });
     }
     catch (error) {
         console.log(error);
-        res.status(500).send(error.toString());
+        res.status(500).send(String(error));
     }
 });
 

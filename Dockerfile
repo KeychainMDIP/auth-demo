@@ -1,5 +1,5 @@
 # Use the official Node.js as the base image
-FROM node:18.18.2
+FROM node:22.15.0-bullseye-slim
 
 # Set the working directory
 WORKDIR /app
@@ -15,7 +15,7 @@ COPY client/src ./client/src/
 # Copy the server build to the server directory
 COPY server/package*.json ./server/
 COPY server/src ./server/src/
-COPY server/*.pem ./server/
+COPY server/tsconfig.json ./server/
 
 # Install dependencies
 RUN npm ci
