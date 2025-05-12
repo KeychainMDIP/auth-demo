@@ -15,7 +15,7 @@ COPY client/src ./client/src/
 # Copy the server build to the server directory
 COPY server/package*.json ./server/
 COPY server/src ./server/src/
-COPY server/*.pem ./server/
+COPY server/tsconfig.json ./server/
 
 # Install dependencies
 RUN npm ci
