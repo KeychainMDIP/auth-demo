@@ -113,11 +113,11 @@ function Home() {
                 </Grid>
                 <Grid item xs={true} style={{ textAlign: 'right' }}>
                     {isAuthenticated ? (
-                        <Button variant="contained" color="primary" onClick={logout}>
+                        <Button variant="contained" color="primary" onClick={logout} sx={{ mt: 2, ml: 3 }}>
                             Logout
                         </Button>
                     ) : (
-                        <Button variant="contained" color="primary" onClick={login}>
+                        <Button variant="contained" color="primary" onClick={login} sx={{ mt: 2, ml: 3 }}>
                             Login
                         </Button>
                     )}
