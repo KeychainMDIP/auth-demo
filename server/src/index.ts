@@ -400,7 +400,7 @@ app.post('/api/logout', async (req: Request, res: Response) => {
                 console.log(err);
             }
         });
-        res.redirect('/login');
+        res.json({ ok: true });
     }
     catch (error) {
         console.log(error);

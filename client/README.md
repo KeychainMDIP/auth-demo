@@ -9,8 +9,8 @@ This folder contains a React client project for the MDIP Auth Demo’s front-end
     - `npm install`
 
 2. **.env configuration**:
-    - `PORT=3001`
-    - `REACT_APP_API_URL=http://localhost:3000/api` (or wherever your server runs)
+    - `VITE_PORT=3001`
+    - `VITE_API_URL=http://localhost:3000/api` (or wherever your server runs)
 
 3. **Start** the client dev server:
     - `npm start`

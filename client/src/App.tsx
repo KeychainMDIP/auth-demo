@@ -7,7 +7,7 @@ import {
     Routes,
     Route,
 } from "react-router-dom";
-import { Box, Button, Grid, Select, MenuItem, TextField, Typography } from '@mui/material';
+import { Box, Button, Select, MenuItem, TextField, Typography } from '@mui/material';
 import { Table, TableBody, TableRow, TableCell } from '@mui/material';
 import axios from 'axios';
 import { format, differenceInDays } from 'date-fns';
@@ -16,9 +16,24 @@ import { QRCodeSVG } from 'qrcode.react';
 import './App.css';
 
 const api = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || '/api',
+    baseURL: import.meta.env.VITE_API_URL || '/api',
     withCredentials: true,
 });
+
+interface AuthState {
+    isAuthenticated: boolean;
+    userDID: string;
+    isOwner: boolean;
+    isAdmin: boolean;
+    isModerator: boolean;
+    isMember: boolean;
+    profile?: {
+        logins?: number;
+        name?: string;
+        [key: string]: any;
+    }
+    [key: string]: any;
+}
 
 function App() {
     return (
@@ -38,27 +53,31 @@ function App() {
     );
 }
 
-function Header({ title }) {
+function Header({ title } : { title: string }) {
     return (
-        <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={3}>
-            <Grid item>
-                <Link to="/">
-                    <img src="/demo.png" alt="home" />
-                </Link>
-            </Grid>
-            <Grid item>
-                <h1>{title}</h1>
-            </Grid>
-        </Grid>
+        <Box
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 3,
+            }}
+        >
+            <Link to="/">
+                <img src="/demo.png" alt="home" />
+            </Link>
+            <Typography variant="h4" component="h1">
+                {title}
+            </Typography>
+        </Box>
     )
 }
 
 function Home() {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [auth, setAuth] = useState(null);
-    const [userDID, setUserDID] = useState('');
-    const [userName, setUserName] = useState('');
-    const [logins, setLogins] = useState(0);
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [auth, setAuth] = useState<AuthState | null>(null);
+    const [userDID, setUserDID] = useState<string>('');
+    const [userName, setUserName] = useState<string>('');
+    const [logins, setLogins] = useState<number>(0);
 
     const navigate = useNavigate();
 
@@ -66,20 +85,20 @@ function Home() {
         const init = async () => {
             try {
                 const response = await api.get(`/check-auth`);
-                const auth = response.data;
+                const auth: AuthState = response.data;
                 setAuth(auth);
                 setIsAuthenticated(auth.isAuthenticated);
                 setUserDID(auth.userDID);
 
                 if (auth.profile) {
-                    setLogins(auth.profile.logins);
+                    setLogins(auth.profile.logins || 0);
 
                     if (auth.profile.name) {
                         setUserName(auth.profile.name);
                     }
                 }
             }
-            catch (error) {
+            catch (error: any) {
                 window.alert(error);
             }
         };
@@ -107,22 +126,19 @@ function Home() {
     return (
         <div className="App">
             <Header title="Home" />
-            <Grid container style={{ width: '400px' }}>
-                <Grid item xs={true}>
-                    <h2>MDIP auth demo</h2>
-                </Grid>
-                <Grid item xs={true} style={{ textAlign: 'right' }}>
-                    {isAuthenticated ? (
-                        <Button variant="contained" color="primary" onClick={logout} sx={{ mt: 2, ml: 3 }}>
-                            Logout
-                        </Button>
-                    ) : (
-                        <Button variant="contained" color="primary" onClick={login} sx={{ mt: 2, ml: 3 }}>
-                            Login
-                        </Button>
-                    )}
-                </Grid>
-            </Grid>
+            <Box sx={{ mb:2, width: 400, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h5">MDIP auth demo</Typography>
+
+                {isAuthenticated ? (
+                    <Button variant="contained" color="primary" onClick={logout} sx={{ mt: 2 }}>
+                        Logout
+                    </Button>
+                ) : (
+                    <Button variant="contained" color="primary" onClick={login} sx={{ mt: 2 }}>
+                        Login
+                    </Button>
+                )}
+            </Box>
 
             {isAuthenticated ? (
                 <Box>
@@ -159,27 +175,29 @@ function Home() {
 }
 
 function ViewLogin() {
-    const [challengeDID, setChallengeDID] = useState('');
-    const [responseDID, setResponseDID] = useState('');
-    const [loggingIn, setLoggingIn] = useState(false);
-    const [challengeURL, setChallengeURL] = useState(null);
-    const [extensionURL, setExtensionURL] = useState('');
-    const [challengeCopied, setChallengeCopied] = useState(false);
+    const [challengeDID, setChallengeDID] = useState<string>('');
+    const [responseDID, setResponseDID] = useState<string>('');
+    const [loggingIn, setLoggingIn] = useState<boolean>(false);
+    const [challengeURL, setChallengeURL] = useState<string | null>(null);
+    const [extensionURL, setExtensionURL] = useState<string>('');
+    const [challengeCopied, setChallengeCopied] = useState<boolean>(false);
 
     const navigate = useNavigate();
-    const intervalIdRef = useRef();
+    const intervalIdRef = useRef<number | null>(null);
 
     useEffect(() => {
         const init = async () => {
             try {
-                intervalIdRef.current = setInterval(async () => {
+                intervalIdRef.current = window.setInterval(async () => {
                     try {
                         const response = await api.get(`/check-auth`);
                         if (response.data.isAuthenticated) {
-                            clearInterval(intervalIdRef.current);
+                            if (intervalIdRef.current) {
+                                clearInterval(intervalIdRef.current);
+                            }
                             navigate('/');
                         }
-                    } catch (error) {
+                    } catch (error: any) {
                         console.error('Failed to check authentication:', error);
                     }
                 }, 1000); // Check every second
@@ -190,14 +208,18 @@ function ViewLogin() {
                 setExtensionURL(`mdip://auth?challenge=${challenge}`);
                 setChallengeURL(encodeURI(challengeURL));
             }
-            catch (error) {
+            catch (error: any) {
                 window.alert(error);
             }
         };
 
         init();
         // Clear the interval when the component is unmounted
-        return () => clearInterval(intervalIdRef.current);
+        return () => {
+            if (intervalIdRef.current) {
+                clearInterval(intervalIdRef.current);
+            }
+        }
     }, []);
 
     async function login() {
@@ -213,22 +235,22 @@ function ViewLogin() {
                 alert('login failed');
             }
         }
-        catch (error) {
+        catch (error: any) {
             window.alert(error);
         }
 
         setLoggingIn(false);
     }
 
-    async function copyToClipboard(text) {
+    async function copyToClipboard(text: string) {
         try {
             await navigator.clipboard.writeText(text);
             setChallengeCopied(true);
         }
-        catch (error) {
-            window.alert('Failed to copy text: ', error);
+        catch (error: any) {
+            window.alert('Failed to copy text: ' + error);
         }
-    };
+    }
 
     return (
         <div className="App">
@@ -267,7 +289,11 @@ function ViewLogin() {
                                 onChange={(e) => setResponseDID(e.target.value)}
                                 fullWidth
                                 margin="normal"
-                                inputProps={{ maxLength: 80 }}
+                                slotProps={{
+                                    htmlInput: {
+                                        maxLength: 80,
+                                    },
+                                }}
                             />
                         </TableCell>
                         <TableCell>
@@ -291,13 +317,15 @@ function ViewLogout() {
                 await api.post(`/logout`);
                 navigate('/');
             }
-            catch (error) {
-                window.alert('Failed to logout: ', error);
+            catch (error: any) {
+                window.alert('Failed to logout: ' + error);
             }
         };
 
         init();
-    });
+    }, [navigate]);
+
+    return null;
 }
 
 function ViewMembers() {
@@ -313,7 +341,7 @@ function ViewMembers() {
                     navigate('/');
                 }
             }
-            catch (error) {
+            catch (error: any) {
                 navigate('/');
             }
         };
@@ -330,7 +358,7 @@ function ViewMembers() {
 }
 
 function ViewModerators() {
-    const [users, setUsers] = useState([]);
+    const [users, setUsers] = useState<string[]>([]);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -339,7 +367,7 @@ function ViewModerators() {
                 const response = await api.get(`/users`);
                 setUsers(response.data);
             }
-            catch (error) {
+            catch (error: any) {
                 navigate('/');
             }
         };
@@ -378,7 +406,7 @@ function ViewAdmins() {
                     navigate('/');
                 }
             }
-            catch (error) {
+            catch (error: any) {
                 navigate('/');
             }
         };
@@ -395,7 +423,7 @@ function ViewAdmins() {
 }
 
 function ViewOwner() {
-    const [adminInfo, setAdminInfo] = useState(null);
+    const [adminInfo, setAdminInfo] = useState<any>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -404,7 +432,7 @@ function ViewOwner() {
                 const response = await api.get(`/admin`);
                 setAdminInfo(response.data);
             }
-            catch (error) {
+            catch (error: any) {
                 navigate('/');
             }
         };
@@ -424,19 +452,19 @@ function ViewOwner() {
 function ViewProfile() {
     const { did } = useParams();
     const navigate = useNavigate();
-    const [auth, setAuth] = useState(null);
-    const [profile, setProfile] = useState(null);
-    const [currentName, setCurrentName] = useState("");
-    const [newName, setNewName] = useState("");
-    const [roleList, setRoleList] = useState([]);
-    const [currentRole, setCurrentRole] = useState("");
-    const [newRole, setNewRole] = useState("");
+    const [auth, setAuth] = useState<AuthState | null>(null);
+    const [profile, setProfile] = useState<any>(null);
+    const [currentName, setCurrentName] = useState<string>("");
+    const [newName, setNewName] = useState<string>("");
+    const [roleList, setRoleList] = useState<string[]>([]);
+    const [currentRole, setCurrentRole] = useState<string>("");
+    const [newRole, setNewRole] = useState<string>("");
 
     useEffect(() => {
         const init = async () => {
             try {
                 const getAuth = await api.get(`/check-auth`);
-                const auth = getAuth.data;
+                const auth: AuthState = getAuth.data;
 
                 setAuth(auth);
 
@@ -457,7 +485,7 @@ function ViewProfile() {
 
                 setRoleList(['Admin', 'Moderator', 'Member']);
             }
-            catch (error) {
+            catch (error: any) {
                 navigate('/');
             }
         };
@@ -473,7 +501,7 @@ function ViewProfile() {
             setCurrentName(name);
             profile.name = name;
         }
-        catch (error) {
+        catch (error: any) {
             window.alert(error);
         }
     }
@@ -486,12 +514,12 @@ function ViewProfile() {
             setCurrentRole(role);
             profile.role = role;
         }
-        catch (error) {
+        catch (error: any) {
             window.alert(error);
         }
     }
 
-    function formatDate(time) {
+    function formatDate(time: string) {
         const date = new Date(time);
         const now = new Date();
         const days = differenceInDays(now, date);
@@ -537,24 +565,29 @@ function ViewProfile() {
                         <TableCell>Name:</TableCell>
                         <TableCell>
                             {profile.isUser && currentRole !== 'Owner' ? (
-                                <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={3}>
-                                    <Grid item>
-                                        <TextField
-                                            label=""
-                                            style={{ width: '300px' }}
-                                            value={newName}
-                                            onChange={(e) => setNewName(e.target.value)}
-                                            fullWidth
-                                            margin="normal"
-                                            inputProps={{ maxLength: 20 }}
-                                        />
-                                    </Grid>
-                                    <Grid item>
-                                        <Button variant="contained" color="primary" onClick={saveName} disabled={newName === currentName}>
-                                            Save
-                                        </Button>
-                                    </Grid>
-                                </Grid>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                    <TextField
+                                        label=""
+                                        value={newName}
+                                        onChange={(e) => setNewName(e.target.value)}
+                                        slotProps={{
+                                            htmlInput: {
+                                                maxLength: 20,
+                                            },
+                                        }}
+                                        sx={{ width: 300 }}
+                                        margin="normal"
+                                        fullWidth
+                                    />
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        onClick={saveName}
+                                        disabled={newName === currentName}
+                                    >
+                                        Save
+                                    </Button>
+                                </Box>
                             ) : (
                                 currentName
                             )}
@@ -563,32 +596,34 @@ function ViewProfile() {
                     <TableRow>
                         <TableCell>Role:</TableCell>
                         <TableCell>
-                            {auth.isAdmin && currentRole !== 'Owner' ? (
-                                <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={3}>
-                                    <Grid item>
-                                        <Select
-                                            style={{ width: '300px' }}
-                                            value={newRole}
-                                            fullWidth
-                                            displayEmpty
-                                            onChange={(event) => setNewRole(event.target.value)}
-                                        >
-                                            <MenuItem value="" disabled>
-                                                Select role
+                            {auth?.isAdmin && currentRole !== 'Owner' ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                    <Select
+                                        value={newRole}
+                                        displayEmpty
+                                        onChange={(event) => setNewRole(event.target.value)}
+                                        sx={{ width: 300 }}
+                                        fullWidth
+                                    >
+                                        <MenuItem value="" disabled>
+                                            Select role
+                                        </MenuItem>
+                                        {roleList.map((role, index) => (
+                                            <MenuItem value={role} key={index}>
+                                                {role}
                                             </MenuItem>
-                                            {roleList.map((role, index) => (
-                                                <MenuItem value={role} key={index}>
-                                                    {role}
-                                                </MenuItem>
-                                            ))}
-                                        </Select>
-                                    </Grid>
-                                    <Grid item>
-                                        <Button variant="contained" color="primary" onClick={saveRole} disabled={newRole === currentRole}>
-                                            Save
-                                        </Button>
-                                    </Grid>
-                                </Grid>
+                                        ))}
+                                    </Select>
+
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        onClick={saveRole}
+                                        disabled={newRole === currentRole}
+                                    >
+                                        Save
+                                    </Button>
+                                </Box>
                             ) : (
                                 currentRole
                             )}
@@ -606,6 +641,8 @@ function NotFound() {
     useEffect(() => {
         navigate("/");
     });
+
+    return null;
 }
 
 export default App;
