@@ -11,6 +11,8 @@ COPY package*.json .
 COPY client/package*.json ./client/
 COPY client/public ./client/public/
 COPY client/src ./client/src/
+COPY client/index.html ./client/
+COPY client/vite.config.ts ./client/
 
 # Copy the server build to the server directory
 COPY server/package*.json ./server/
