@@ -10,8 +10,9 @@ services:
       - AD_GATEKEEPER_URL=${AD_GATEKEEPER_URL:-http://host.docker.internal:4224}
       - AD_KEYMASTER_URL=${AD_KEYMASTER_URL}
       - AD_WALLET_URL=${AD_WALLET_URL:-http://host.docker.internal:4224}
+      - AD_DATABASE=${AD_DATABASE}
     volumes:
-      - ./data:/app/server/data
+      - ./server/data:/app/server/data
     ports:
       - "${AD_HOST_PORT:-3000}:${AD_HOST_PORT:-3000}"
     extra_hosts:
