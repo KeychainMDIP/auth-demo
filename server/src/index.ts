@@ -6,7 +6,6 @@ import express, {
 import session from 'express-session';
 import morgan from 'morgan';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -16,8 +15,12 @@ import GatekeeperClient from '@mdip/gatekeeper/client';
 import Keymaster from '@mdip/keymaster';
 import KeymasterClient from '@mdip/keymaster/client';
 import WalletJson from '@mdip/keymaster/wallet/json';
+import { DatabaseInterface, User } from './db/interfaces.js';
+import { DbJson } from './db/json.js';
+import { DbSqlite } from './db/sqlite.js';
 
 let keymaster: Keymaster | KeymasterClient;
+let db: DatabaseInterface;
 
 dotenv.config();
 
@@ -25,27 +28,15 @@ const HOST_PORT = Number(process.env.AD_HOST_PORT) || 3000;
 const HOST_URL = process.env.AD_HOST_URL || 'http://localhost:3000';
 const GATEKEEPER_URL = process.env.AD_GATEKEEPER_URL || 'http://localhost:4224';
 const WALLET_URL = process.env.AD_WALLET_URL || 'http://localhost:4224';
+const AD_DATABASE_TYPE = process.env.AD_DATABASE || 'json';
 
 const app = express();
-const dbName = 'data/db.json';
 const logins: Record<string, {
     response: string;
     challenge: string;
     did: string;
     verify: any;
 }> = {};
-
-interface Database {
-    users?: Record<string, {
-        firstLogin?: string;
-        lastLogin?: string;
-        logins?: number;
-        role?: string;
-        name?: string;
-        [key: string]: any;
-    }>;
-    [key: string]: any;
-}
 
 const roles = {
     owner: 'auth-demo-owner',
@@ -65,19 +56,6 @@ app.use(session({
     cookie: { secure: false } // Set to true if using HTTPS
 }));
 
-function loadDb(): Database {
-    if (fs.existsSync(dbName)) {
-        return JSON.parse(fs.readFileSync(dbName, 'utf-8'));
-    }
-    else {
-        return {};
-    }
-}
-
-function writeDb(db: Database): void {
-    fs.writeFileSync(dbName, JSON.stringify(db, null, 4));
-}
-
 let ownerDID = '';
 
 async function verifyRoles(): Promise<void> {
@@ -85,10 +63,11 @@ async function verifyRoles(): Promise<void> {
 
     try {
         const docs = await keymaster.resolveDID(roles.owner);
-        if (docs.didDocument?.id) {
-            ownerDID = docs.didDocument.id;
-            console.log(`${roles.owner}: ${ownerDID}`);
+        if (!docs.didDocument?.id) {
+            throw new Error('No DID found');
         }
+        ownerDID = docs.didDocument.id;
+        console.log(`${roles.owner}: ${ownerDID}`);
     }
     catch (error) {
         console.log(`Creating ID ${roles.owner}`);
@@ -223,10 +202,10 @@ async function userInRole(user: string, role: string): Promise<boolean> {
 async function verifyDb(): Promise<void> {
     console.log('verifying db...');
 
-    const db = loadDb();
+    const currentDb = db.loadDb();
 
-    if (db.users) {
-        for (const userDID of Object.keys(db.users)) {
+    if (currentDb.users) {
+        for (const userDID of Object.keys(currentDb.users)) {
             let role = await getRole(userDID);
 
             if (role) {
@@ -238,15 +217,15 @@ async function verifyDb(): Promise<void> {
             }
 
             if (role) {
-                db.users[userDID].role = role;
+                currentDb.users[userDID].role = role;
             }
 
             if (role === 'Owner') {
-                db.users[userDID].name = roles.owner;
+                currentDb.users[userDID].name = roles.owner;
             }
         }
 
-        writeDb(db);
+        db.writeDb(currentDb);
     }
 }
 
@@ -279,22 +258,22 @@ async function loginUser(response: string): Promise<any> {
     if (verify.match) {
         const challenge = verify.challenge;
         const did = verify.responder!;
-        const db = loadDb();
+        const currentDb = db.loadDb();
 
-        if (!db.users) {
-            db.users = {};
+        if (!currentDb.users) {
+            currentDb.users = {};
         }
 
         const now = new Date().toISOString();
 
-        if (db.users[did]) {
-            db.users[did].lastLogin = now;
-            db.users[did].logins = (db.users[did].logins || 0) + 1;
+        if (currentDb.users[did]) {
+            currentDb.users[did].lastLogin = now;
+            currentDb.users[did].logins = (currentDb.users[did].logins || 0) + 1;
         }
         else {
             const role = await getRole(did) || await addMember(did);
 
-            db.users[did] = {
+            currentDb.users[did] = {
                 firstLogin: now,
                 lastLogin: now,
                 logins: 1,
@@ -302,7 +281,7 @@ async function loginUser(response: string): Promise<any> {
             }
         }
 
-        writeDb(db);
+        db.writeDb(currentDb);
 
         logins[challenge] = {
             response,
@@ -419,7 +398,7 @@ app.get('/api/check-auth', async (req: Request, res: Response) => {
 
         const isAuthenticated = !!req.session.user;
         const userDID = isAuthenticated ? req.session.user?.did : null;
-        const db = loadDb();
+        const currentDb = db.loadDb();
 
         let isOwner = false;
         let isAdmin = false;
@@ -428,8 +407,8 @@ app.get('/api/check-auth', async (req: Request, res: Response) => {
 
         let profile: any = null;
 
-        if (isAuthenticated && userDID && db.users) {
-            profile = db.users[userDID] || null;
+        if (isAuthenticated && userDID && currentDb.users) {
+            profile = currentDb.users[userDID] || null;
             if (userDID === ownerDID) {
                 isOwner = true;
             }
@@ -458,8 +437,8 @@ app.get('/api/check-auth', async (req: Request, res: Response) => {
 
 app.get('/api/users', isAuthenticated, async (_: Request, res: Response) => {
     try {
-        const db = loadDb();
-        const users = db.users ? Object.keys(db.users) : [];
+        const currentDb = db.loadDb();
+        const users = currentDb.users ? Object.keys(currentDb.users) : [];
         res.json(users);
     }
     catch (error) {
@@ -470,7 +449,7 @@ app.get('/api/users', isAuthenticated, async (_: Request, res: Response) => {
 
 app.get('/api/admin', isAdmin, async (_: Request, res: Response) => {
     try {
-        res.json(loadDb());
+        res.json(db.loadDb());
     }
     catch (error) {
         console.log(error);
@@ -481,14 +460,14 @@ app.get('/api/admin', isAdmin, async (_: Request, res: Response) => {
 app.get('/api/profile/:did', isAuthenticated, async (req: Request, res: Response) => {
     try {
         const did = req.params.did;
-        const db = loadDb();
+        const currentDb = db.loadDb();
 
-        if (!db.users || !db.users[did]) {
+        if (!currentDb.users || !currentDb.users[did]) {
             res.status(404).send('Not found');
             return;
         }
 
-        const profile = db.users[did];
+        const profile: User = { ...currentDb.users[did] };
 
         profile.did = did;
         profile.role = (await getRole(did))!;
@@ -505,14 +484,14 @@ app.get('/api/profile/:did', isAuthenticated, async (req: Request, res: Response
 app.get('/api/profile/:did/name', isAuthenticated, async (req: Request, res: Response) => {
     try {
         const did = req.params.did;
-        const db = loadDb();
+        const currentDb = db.loadDb();
 
-        if (!db.users || !db.users[did]) {
+        if (!currentDb.users || !currentDb.users[did]) {
             res.status(404).send('Not found');
             return;
         }
 
-        const profile = db.users[did];
+        const profile = currentDb.users[did];
         res.json({ name: profile.name });
     }
     catch (error) {
@@ -531,14 +510,14 @@ app.put('/api/profile/:did/name', isAuthenticated, async (req: Request, res: Res
             return;
         }
 
-        const db = loadDb();
-        if (!db.users || !db.users[did]) {
+        const currentDb = db.loadDb();
+        if (!currentDb.users || !currentDb.users[did]) {
             res.status(404).send('Not found');
             return;
         }
 
-        db.users[did].name = name;
-        writeDb(db);
+        currentDb.users[did].name = name;
+        db.writeDb(currentDb);
 
         res.json({ ok: true, message: `name set to ${name}` });
     }
@@ -563,14 +542,14 @@ app.get('/api/roles', async (_: Request, res: Response) => {
 app.get('/api/profile/:did/role', isAuthenticated, async (req: Request, res: Response) => {
     try {
         const did = req.params.did;
-        const db = loadDb();
+        const currentDb = db.loadDb();
 
-        if (!db.users || !db.users[did]) {
+        if (!currentDb.users || !currentDb.users[did]) {
             res.status(404).send('Not found');
             return;
         }
 
-        const profile = db.users[did];
+        const profile = currentDb.users[did];
         res.json({ role: profile.role });
     }
     catch (error) {
@@ -589,14 +568,14 @@ app.put('/api/profile/:did/role', isAdmin, async (req: Request, res: Response) =
             return;
         }
 
-        const db = loadDb();
-        if (!db.users || !db.users[did]) {
+        const currentDb = db.loadDb();
+        if (!currentDb.users || !currentDb.users[did]) {
             res.status(404).send('Not found');
             return;
         }
 
-        db.users[did].role = (await setRole(did, role))!;
-        writeDb(db);
+        currentDb.users[did].role = (await setRole(did, role))!;
+        db.writeDb(currentDb);
 
         res.json({ ok: true, message: `role set to ${role}` });
     }
@@ -630,6 +609,21 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 app.listen(HOST_PORT, '0.0.0.0', async () => {
+    if (AD_DATABASE_TYPE === 'sqlite') {
+        db = new DbSqlite();
+    } else {
+        db = new DbJson();
+    }
+
+    if (db.init) {
+        try {
+            db.init();
+        } catch (e: any) {
+            console.error(`Error initialising database: ${e.message}`);
+            process.exit(1);
+        }
+    }
+
     if (process.env.AD_KEYMASTER_URL) {
         keymaster = new KeymasterClient();
         await keymaster.connect({

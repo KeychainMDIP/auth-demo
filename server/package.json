@@ -14,6 +14,8 @@
     "@mdip/cipher": "^1.1.0",
     "@mdip/gatekeeper": "^1.1.0",
     "@mdip/keymaster": "^1.1.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^11.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^5.1.0",
