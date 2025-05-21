@@ -317,7 +317,6 @@ app.get('/api/version', async (_: Request, res: Response) => {
 app.get('/api/challenge', async (req: Request, res: Response) => {
     try {
         const challenge = await keymaster.createChallenge({
-            // @ts-ignore
             callback: `${HOST_URL}/api/login`
         });
         req.session.challenge = challenge;
