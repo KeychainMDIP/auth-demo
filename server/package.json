@@ -11,9 +11,9 @@
   "author": "David McFadzean <davidmc@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@mdip/cipher": "^1.1.0",
-    "@mdip/gatekeeper": "^1.1.0",
-    "@mdip/keymaster": "^1.1.0",
+    "@mdip/cipher": "^1.1.3",
+    "@mdip/gatekeeper": "^1.1.3",
+    "@mdip/keymaster": "^1.1.3",
     "@types/better-sqlite3": "^7.6.13",
     "better-sqlite3": "^11.10.0",
     "cors": "^2.8.5",
