@@ -1,5 +1,5 @@
 {
-  "name": "auth-demo",
+  "name": "group-vault-demo",
   "private": true,
   "scripts": {
     "install": "npm install --prefix server && npm install --prefix client",

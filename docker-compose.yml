@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: keychainmdip/auth-demo
+    image: keychainmdip/group-vault-demo
     environment:
       - AD_HOST_PORT=${AD_HOST_PORT:-3000}
       - AD_HOST_URL=${AD_HOST_URL}

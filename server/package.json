@@ -1,8 +1,8 @@
 {
-  "name": "auth-demo",
+  "name": "group-vault-demo",
   "version": "1.0.0",
   "type": "module",
-  "description": "MDIP auth demo",
+  "description": "MDIP GroupVault demo",
   "main": "dist/index.js",
   "scripts": {
     "start": "tsc && node dist/index.js"
