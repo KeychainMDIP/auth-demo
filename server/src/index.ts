@@ -686,7 +686,6 @@ app.get('/api/vaults/:vaultDID/items', isAuthenticated, async (req: Request, res
         }
 
         const itemsMap = await keymaster.listGroupVaultItems(vaultDID);
-        console.log("Raw itemsMap from keymaster.listGroupVaultItems:", JSON.stringify(itemsMap, null, 2));
         const formattedItems: Record<string, any> = {};
         for (const name in itemsMap) {
             if (name.startsWith('login:')) {
